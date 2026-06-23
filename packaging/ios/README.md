@@ -20,7 +20,7 @@ roadmap a fasi, stime) vedi **[../../README.ios.md](../../README.ios.md)**.
 | [dependencies.md](dependencies.md) | DAG completo delle dipendenze, sistemi di build, drop list. |
 | [build-deps.sh](build-deps.sh) | Driver (macOS) che compila il superbuild per una piattaforma. |
 | [build-krita-ios.sh](build-krita-ios.sh) | Orchestratore end-to-end: deps → configure → build → `.ipa`. |
-| [ci.md](ci.md) | Come eseguire la build su GitHub Actions, self-hosted, CircleCI o in locale. |
+| [ci.md](ci.md) | Come eseguire la build su GitHub Actions, self-hosted o in locale. |
 
 File correlati fuori da qui:
 - [../../cmake/modules/ios.toolchain.cmake](../../cmake/modules/ios.toolchain.cmake) — toolchain CMake iOS.

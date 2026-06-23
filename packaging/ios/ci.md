@@ -13,12 +13,17 @@ Variabili d'ambiente principali: `PLATFORM` (`OS64`|`SIMULATORARM64`),
 
 ---
 
-## 1. GitHub Actions (incluso)
+## 1. GitHub Actions — **configurato, gratis per repo pubblici** ✅
 
-Già pronto in [`.github/workflows/ios.yml`](../../.github/workflows/ios.yml). Runner
-`macos-14` (Apple silicon). Avvio: scheda **Actions → iOS build → Run workflow**, oppure
-push su un branch `ios`. Qt arriva da `install-qt-action`; l'artifact `.ipa` è scaricabile
-a fine job. Gratis per repo pubblici; ~free-tier minuti per repo privati.
+Già pronto in [`.github/workflows/ios.yml`](../../.github/workflows/ios.yml), runner
+`macos-14` (Apple silicon). Installa **sia il Qt host (desktop macOS) sia il Qt iOS** — la
+cross-build Qt6 richiede entrambi — e li passa all'orchestratore via `QT_HOST_PATH` e
+`QT_IOS_ROOT`. Parte da solo al push su `main`/`ios`, oppure da **Actions → iOS build →
+Run workflow**. L'`.ipa` è negli *Artifacts* del job.
+
+**È il percorso a costo zero**: i runner macOS sono gratuiti per i repository **pubblici**
+(per i privati i minuti macOS contano 10× sul free tier, ~200 min/mese). Per un fork GPL di
+Krita tenere il repo pubblico è naturale. Nessuna configurazione aggiuntiva: basta pushare.
 
 ## 2. Mac self-hosted (il tuo Mac come runner)
 
@@ -31,24 +36,16 @@ export QT_IOS_ROOT=/path/to/Qt/6.7.x/ios
 Cambia in `ios.yml` `runs-on: macos-14` → `runs-on: [self-hosted, macOS]` e rimuovi lo
 step `install-qt-action` (usi il Qt locale via `QT_IOS_ROOT`).
 
-## 3. CircleCI (executor macOS) — **configurato**
+## 3. Altre alternative gratuite
 
-Il file [`.circleci/config.yml`](../../.circleci/config.yml) è **già pronto**. Installa Qt
-(host + iOS) con `aqtinstall`, cachea Qt e le dipendenze, esegue l'orchestratore e
-archivia l'`.ipa` come *artifact*.
+Se non puoi usare GitHub Actions, lo stesso [build-krita-ios.sh](build-krita-ios.sh) gira
+su altri runner macOS (verifica i limiti del free tier, cambiano spesso):
+- **Codemagic** — CI mobile, free tier ~500 min/mese su M-series; gestisce anche il signing iOS.
+- **Appveyor** — gratis per progetti open source, immagini macOS.
+- **Self-hosted** (vedi §2) — gratis se hai un Mac qualsiasi.
 
-Attivazione:
-1. Su https://app.circleci.com accedi con GitHub e **"Set Up Project"** sul repo.
-2. CircleCI rileva `.circleci/config.yml`; al push la pipeline parte.
-3. L'`.ipa` (quando prodotto) è in **Artifacts** del job `build-ios`.
-
-Note:
-- L'**executor macOS di CircleCI richiede un piano con minuti macOS** (non incluso nel
-  free tier Linux); è la differenza principale rispetto ad altri runner.
-- `xcode` (immagine), `resource_class` e `QT_VERSION` sono in cima al job — aggiornali se
-  serve una versione diversa.
-- Per il Simulator, duplica il job con `PLATFORM: SIMULATORARM64` (e adatta i path di cache,
-  che includono `OS64`).
+> Versioni precedenti di questa guida configuravano Cirrus CI e CircleCI; rimossi a favore
+> di GitHub Actions, gratuito per repo pubblici.
 
 ## 4. In locale, sul tuo Mac
 

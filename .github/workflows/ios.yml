@@ -1,14 +1,14 @@
-# Krita for iOS / iPadOS — Phase 0 build harness.
+# Krita for iOS / iPadOS — Phase 0 build (GitHub Actions).
 #
-# Mac-free authoring path (README.ios.md §6): write code on any OS, let a macOS
-# runner cross-compile. The actual build logic lives in
-# packaging/ios/build-krita-ios.sh so the *same* build runs locally or on any
+# Free macOS runners for PUBLIC repositories. The build logic lives in
+# packaging/ios/build-krita-ios.sh so the same build runs locally or on any
 # other runner (see packaging/ios/ci.md). This YAML is just the GitHub glue.
 #
-# Still a work in progress: the dependency superbuild is partial and Qt is stock,
-# so the build is not expected to go fully green yet — each phase gets further.
+# Honest status: the dependency superbuild is partial and Qt is stock, so the
+# build is not expected to produce a finished krita.app yet — the orchestrator
+# reports how far it got and exits cleanly. Any .ipa is uploaded as an artifact.
 #
-# Trigger manually (workflow_dispatch) or by pushing an `ios` branch.
+# Triggers on push to main/ios branches, or manually (workflow_dispatch).
 
 name: iOS build
 
@@ -21,7 +21,7 @@ on:
         default: OS64
         options: [OS64, SIMULATORARM64]
   push:
-    branches: [ ios, ios-** ]
+    branches: [ main, ios, ios-** ]
 
 permissions:
   contents: read
@@ -29,15 +29,15 @@ permissions:
 jobs:
   build:
     name: Krita iOS (${{ github.event.inputs.platform || 'OS64' }})
-    runs-on: macos-14            # Apple silicon runner
+    runs-on: macos-14            # Apple silicon; free for public repos
     env:
       PLATFORM: ${{ github.event.inputs.platform || 'OS64' }}
       DEPLOYMENT_TARGET: "16.0"
+      QT_VERSION: "6.7.3"
       WORK: ${{ github.workspace }}/_ios
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_15.4.app
@@ -45,19 +45,27 @@ jobs:
       - name: Install host tools
         run: brew install ninja cmake
 
-      # Stock Qt-for-iOS to get the harness moving. A production build must swap
-      # this for a patched Qt-for-iOS (Krita's Qt patches). install-qt-action
-      # exports QT_ROOT_DIR, which we pass to the orchestrator as QT_IOS_ROOT.
+      # Qt6 cross-compilation needs BOTH a host (desktop-macOS) Qt for
+      # moc/rcc/uic and the iOS target Qt. Install both; remember their paths.
+      - name: Install host Qt (macOS)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: mac
+          target: desktop
+      - run: echo "QT_HOST_PATH=$QT_ROOT_DIR" >> "$GITHUB_ENV"
+
       - name: Install Qt for iOS
         uses: jurplel/install-qt-action@v4
         with:
-          version: "6.7.*"
+          version: ${{ env.QT_VERSION }}
           host: mac
           target: ios
           modules: qtshadertools qtimageformats qt5compat
+      - run: echo "QT_IOS_ROOT=$QT_ROOT_DIR" >> "$GITHUB_ENV"
 
-      # Cache the cross-compiled dependency prefix; the orchestrator auto-skips
-      # the dependency build when this is already populated.
+      # Cross-compiled dependency prefix; the orchestrator auto-skips the
+      # dependency build when this is already populated.
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
@@ -65,8 +73,6 @@ jobs:
           key: ios-deps-${{ env.PLATFORM }}-${{ hashFiles('packaging/ios/**') }}
 
       - name: Build Krita (deps + configure + build + package)
-        env:
-          QT_IOS_ROOT: ${{ env.QT_ROOT_DIR }}
         run: bash packaging/ios/build-krita-ios.sh
         continue-on-error: true   # expected until the deps DAG + patched Qt land
 

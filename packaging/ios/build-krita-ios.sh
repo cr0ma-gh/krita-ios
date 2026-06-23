@@ -4,7 +4,7 @@
 # End-to-end iOS/iPadOS build orchestrator for Krita (Phase 0).
 #
 # One entry point that any macOS environment uses — a GitHub-hosted runner, a
-# self-hosted Mac, CircleCI, or a developer's Mac. Keeps the CI YAML thin and
+# self-hosted Mac, or a developer's Mac. Keeps the CI YAML thin and
 # makes the exact same build reproducible locally. See packaging/ios/ci.md.
 #
 # Steps: preflight -> dependencies -> configure -> build -> package unsigned .ipa
