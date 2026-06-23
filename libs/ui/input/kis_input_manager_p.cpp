@@ -24,6 +24,10 @@
 #include "kis_input_profile_manager.h"
 #include "kis_extended_modifiers_mapper.h"
 
+#ifdef Q_OS_IOS
+#include "KisIOSTabletInput.h"
+#endif
+
 #include "kis_zoom_and_rotate_action.h"
 #include "kis_popup_palette.h"
 #include "config-qt-patches-present.h"
@@ -286,6 +290,13 @@ void KisInputManager::Private::CanvasSwitcher::addCanvas(KisCanvas2 *canvas)
     if (canvas != d->canvas) {
         d->q->setupAsEventFilter(canvasWidget);
         canvasWidget->installEventFilter(this);
+
+#ifdef Q_OS_IOS
+        // Forward Apple Pencil input to this canvas as QTabletEvents. Relies on
+        // the canvas's top-level native UIView existing; if it is not realised
+        // yet the bridge no-ops, so this may need re-installing on first show.
+        KisIOSTabletInput::install(canvas->canvasWidget());
+#endif
 
         setupFocusThreshold(canvasWidget);
         focusSwitchThreshold.setEnabled(false);

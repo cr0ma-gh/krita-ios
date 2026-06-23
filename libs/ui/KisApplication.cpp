@@ -23,6 +23,10 @@
 #include "KisAndroidDonations.h"
 #endif
 
+#ifdef Q_OS_IOS
+#include "KisIOSFileProxy.h"
+#endif
+
 #include <QStandardPaths>
 #include <QScreen>
 #include <QDir>
@@ -400,10 +404,18 @@ void KisApplication::addResourceTypes()
 bool KisApplication::event(QEvent *event)
 {
 
-    #ifdef Q_OS_MACOS
+    #if defined(Q_OS_MACOS) || defined(Q_OS_IOS)
     if (event->type() == QEvent::FileOpen) {
         QFileOpenEvent *openEvent = static_cast<QFileOpenEvent *>(event);
+    #ifdef Q_OS_IOS
+        // iOS delivers a security-scoped URL (from the Files app / document
+        // picker) that path-based open code cannot read directly. Copy it into
+        // the sandbox via the proxy first; fall back to file() if that fails.
+        const QString localPath = KisIOSFileProxy::getFileFromUrl(openEvent->url().toString());
+        fileOpenRequested(localPath.isEmpty() ? openEvent->file() : localPath);
+    #else
         fileOpenRequested(openEvent->file());
+    #endif
         return true;
     }
     #endif

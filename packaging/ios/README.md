@@ -90,10 +90,15 @@ direttamente dal dispositivo (refresh ogni 7 giorni). Vedi [../../README.ios.md]
   `CMakeLists.txt`), e su iOS si linkano invece i framework `Foundation`+`UIKit`. Tutto
   l'uso di `KisMacos*` nel codice è già dietro `#ifdef Q_OS_MACOS` (non definito su iOS),
   quindi non servono stub di sorgente.
+- **Saldature input/file collegate al resto di Krita.** Apertura file su iOS: il
+  `QFileOpenEvent` in `KisApplication::event()` (stesso percorso di macOS) è instradato
+  via `KisIOSFileProxy`. Apple Pencil: i campioni del bridge sono sintetizzati in
+  `QTabletEvent` (device stilo Qt6) da [input/KisIOSTabletInput.cpp](../../libs/ui/input/KisIOSTabletInput.cpp)
+  e installati in `addCanvas()` ([kis_input_manager_p.cpp](../../libs/ui/input/kis_input_manager_p.cpp))
+  sotto `Q_OS_IOS`. Da validare on-device il *timing* dell'install (se la UIView non è
+  ancora pronta il bridge fa no-op → eventuale reinstall al primo show).
 
-**Da fare (Fase 0 → 3):**
+**Da fare — richiede un Mac per compilare e iterare:**
 1. Completare il superbuild [3rdparty-ios/](3rdparty-ios) con tutto il DAG di
    [dependencies.md](dependencies.md), allineando versioni/patch a `krita-deps-management`.
 2. Sostituire il Qt stock con un **Qt-for-iOS patchato** (patch di Krita).
-3. Collegare il sink di `KisIOSTabletBridge` alla sintesi di `QTabletEvent` per
-   `KisInputManager`, e chiamare `KisIOSFileProxy` da `KisImportExportManager`.
