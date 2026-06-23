@@ -73,7 +73,11 @@ jobs:
           key: ios-deps-${{ env.PLATFORM }}-${{ hashFiles('packaging/ios/**') }}
 
       - name: Build Krita (deps + configure + build + package)
-        run: bash packaging/ios/build-krita-ios.sh
+        run: |
+          mkdir -p "$WORK"
+          # Tee the orchestrator output to a log so it can be inspected as an
+          # artifact (readable anonymously, unlike the auth-gated job logs).
+          bash packaging/ios/build-krita-ios.sh 2>&1 | tee "$WORK/build.log"
         continue-on-error: true   # expected until the deps DAG + patched Qt land
 
       - name: Upload artifact
@@ -81,5 +85,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: krita-ios-${{ env.PLATFORM }}
-          path: ${{ env.WORK }}/krita-unsigned-*.ipa
+          path: |
+            ${{ env.WORK }}/build.log
+            ${{ env.WORK }}/krita-unsigned-*.ipa
           if-no-files-found: warn
