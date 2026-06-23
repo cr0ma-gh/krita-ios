@@ -24,6 +24,11 @@
 cmake_minimum_required(VERSION 3.19)
 project(krita-ios-deps NONE)
 
+# Use the extracted-file timestamps from "now" on URL downloads.
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 include(ExternalProject)
 
 if(NOT DEFINED EXTPREFIX)
@@ -98,7 +103,6 @@ krita_ios_ext(ext_png
 set(LCMS2_VERSION "2.16" CACHE STRING "")
 krita_ios_ext(ext_lcms2
     URL https://github.com/mm2/Little-CMS/releases/download/lcms${LCMS2_VERSION}/lcms2-${LCMS2_VERSION}.tar.gz
-    DEPENDS ext_jpeg ext_tiff
 )
 
 # ---------------------------------------------------------------------------
