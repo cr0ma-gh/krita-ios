@@ -1,0 +1,15 @@
+{
+  "comment": "Krita iPadOS app icon. Phase 0 scaffolding — see packaging/ios/README.md. Provide a single 1024x1024 PNG (no alpha) as AppIcon-1024.png; Xcode 14+ downscales it for every slot. Source art lives under pics/ (e.g. pics/branding/256-apps-calligrakrita.png upscaled, or the SVG logo rendered at 1024).",
+  "images": [
+    {
+      "filename": "AppIcon-1024.png",
+      "idiom": "universal",
+      "platform": "ios",
+      "size": "1024x1024"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}

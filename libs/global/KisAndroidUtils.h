@@ -1,0 +1,27 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+#ifndef __KISANDROIDUTILS_H_
+#define __KISANDROIDUTILS_H_
+
+#include <kritaglobal_export.h>
+
+namespace KisAndroidUtils
+{
+
+// Installs the Android log handler and copies assets.
+KRITAGLOBAL_EXPORT void performInitialSetup();
+
+// Check whether we seem to be running on a Xiaomi device, which requires
+// enabling several workarounds by default. If we need additional workarounds
+// in the future, change this to return an enum or a flag set instead, depending
+// on what's actually needed.
+KRITAGLOBAL_EXPORT bool looksLikeXiaomiDevice();
+
+// Check whether the device supports reporting low-memory situations as an exit
+// reason. Devices that don't will instead report a SIGKILL.
+KRITAGLOBAL_EXPORT bool isLowMemoryKillReportSupported();
+
+} // namespace KisAndroidUtils
+
+#endif // __KISANDROIDUTILS_H_

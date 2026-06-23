@@ -1,0 +1,79 @@
+# Krita for iOS / iPadOS — Phase 0 build harness.
+#
+# Mac-free authoring path (README.ios.md §6): write code on any OS, let a macOS
+# runner cross-compile. The actual build logic lives in
+# packaging/ios/build-krita-ios.sh so the *same* build runs locally or on any
+# other runner (see packaging/ios/ci.md). This YAML is just the GitHub glue.
+#
+# Still a work in progress: the dependency superbuild is partial and Qt is stock,
+# so the build is not expected to go fully green yet — each phase gets further.
+#
+# Trigger manually (workflow_dispatch) or by pushing an `ios` branch.
+
+name: iOS build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Target platform"
+        type: choice
+        default: OS64
+        options: [OS64, SIMULATORARM64]
+  push:
+    branches: [ ios, ios-** ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Krita iOS (${{ github.event.inputs.platform || 'OS64' }})
+    runs-on: macos-14            # Apple silicon runner
+    env:
+      PLATFORM: ${{ github.event.inputs.platform || 'OS64' }}
+      DEPLOYMENT_TARGET: "16.0"
+      WORK: ${{ github.workspace }}/_ios
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Install host tools
+        run: brew install ninja cmake
+
+      # Stock Qt-for-iOS to get the harness moving. A production build must swap
+      # this for a patched Qt-for-iOS (Krita's Qt patches). install-qt-action
+      # exports QT_ROOT_DIR, which we pass to the orchestrator as QT_IOS_ROOT.
+      - name: Install Qt for iOS
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.7.*"
+          host: mac
+          target: ios
+          modules: qtshadertools qtimageformats qt5compat
+
+      # Cache the cross-compiled dependency prefix; the orchestrator auto-skips
+      # the dependency build when this is already populated.
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.WORK }}/deps-${{ env.PLATFORM }}
+          key: ios-deps-${{ env.PLATFORM }}-${{ hashFiles('packaging/ios/**') }}
+
+      - name: Build Krita (deps + configure + build + package)
+        env:
+          QT_IOS_ROOT: ${{ env.QT_ROOT_DIR }}
+        run: bash packaging/ios/build-krita-ios.sh
+        continue-on-error: true   # expected until the deps DAG + patched Qt land
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-ios-${{ env.PLATFORM }}
+          path: ${{ env.WORK }}/krita-unsigned-*.ipa
+          if-no-files-found: warn

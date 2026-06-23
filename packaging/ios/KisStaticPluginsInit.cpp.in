@@ -1,0 +1,19 @@
+/*
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * AUTO-GENERATED — do not edit.
+ * Produced by packaging/ios/static-plugins.cmake via configure_file().
+ *
+ * On iOS every Krita plugin is linked statically (no dlopen). Q_IMPORT_PLUGIN
+ * registers each plugin's KPluginFactory with Qt's static plugin registry so
+ * KoJsonTrader can find them without scanning the filesystem. This translation
+ * unit must be compiled into the main `krita` executable target.
+ *
+ * Each referenced factory must be built with QT_STATICPLUGIN defined and its
+ * static library linked with --whole-archive (or CMake OBJECT/STATIC linkage
+ * that preserves the plugin's self-registration symbols).
+ */
+
+#include <QtPlugin>
+
+@KRITA_IOS_PLUGIN_IMPORTS@

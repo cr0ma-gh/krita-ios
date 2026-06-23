@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Info.plist template for the Krita iPadOS app bundle.
+  Part of the Phase 0 scaffolding (see README.ios.md / packaging/ios/README.md).
+  Processed with CMake configure_file() — @VAR@ placeholders are substituted at
+  configure time. Qt's iOS mkspec injects additional keys at link time.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>Krita</string>
+    <key>CFBundleName</key>
+    <string>Krita</string>
+    <key>CFBundleIdentifier</key>
+    <string>@MACOSX_BUNDLE_GUI_IDENTIFIER@</string>
+    <key>CFBundleExecutable</key>
+    <string>@MACOSX_BUNDLE_BUNDLE_NAME@</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>@KRITA_VERSION_STRING@</string>
+    <key>CFBundleVersion</key>
+    <string>@KRITA_GIT_SHA1_STRING@</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+
+    <!-- iOS runtime requirements -->
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>MinimumOSVersion</key>
+    <string>@DEPLOYMENT_TARGET@</string>
+    <!-- 2 = iPad. Add 1 for iPhone once a phone layout exists. -->
+    <key>UIDeviceFamily</key>
+    <array>
+        <integer>2</integer>
+    </array>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>arm64</string>
+        <string>metal</string>
+    </array>
+
+    <!-- Launch + orientation -->
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UIRequiresFullScreen</key>
+    <false/>
+
+    <!-- High-frequency Apple Pencil sampling (ProMotion 120 Hz) -->
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+
+    <!-- File access: expose Documents to the Files app + open-in-place -->
+    <key>UIFileSharingEnabled</key>
+    <true/>
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
+    <key>UISupportsDocumentBrowser</key>
+    <true/>
+
+    <!-- Usage descriptions (required or the app is rejected/crashes on access) -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Krita needs access to your photo library to import and export images.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Krita needs permission to save exported images to your photo library.</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>Krita stores your documents and resources in the Files app.</string>
+
+    <!-- Document type: native Krita .kra files -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Krita Document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>LSHandlerRank</key>
+            <string>Owner</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.kde.krita.kra</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.png</string>
+                <string>public.jpeg</string>
+                <string>com.adobe.photoshop-image</string>
+                <string>public.tiff</string>
+            </array>
+        </dict>
+    </array>
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>org.kde.krita.kra</string>
+            <key>UTTypeDescription</key>
+            <string>Krita Document</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+                <string>public.zip-archive</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>kra</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>application/x-krita</string>
+                </array>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>
