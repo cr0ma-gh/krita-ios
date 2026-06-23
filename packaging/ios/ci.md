@@ -31,21 +31,24 @@ export QT_IOS_ROOT=/path/to/Qt/6.7.x/ios
 Cambia in `ios.yml` `runs-on: macos-14` → `runs-on: [self-hosted, macOS]` e rimuovi lo
 step `install-qt-action` (usi il Qt locale via `QT_IOS_ROOT`).
 
-## 3. Cirrus CI (macOS gratuito per progetti open source) — **configurato**
+## 3. CircleCI (executor macOS) — **configurato**
 
-Il file [`.cirrus.yml`](../../.cirrus.yml) al root del repo è **già pronto**. Installa Qt
+Il file [`.circleci/config.yml`](../../.circleci/config.yml) è **già pronto**. Installa Qt
 (host + iOS) con `aqtinstall`, cachea Qt e le dipendenze, esegue l'orchestratore e
-pubblica l'`.ipa`.
+archivia l'`.ipa` come *artifact*.
 
 Attivazione:
-1. Installa la **Cirrus CI** app sul tuo repo GitHub (https://cirrus-ci.org → "Install").
-2. Push: la build parte automaticamente; l'`.ipa` finisce negli *Artifacts* del task.
+1. Su https://app.circleci.com accedi con GitHub e **"Set Up Project"** sul repo.
+2. CircleCI rileva `.circleci/config.yml`; al push la pipeline parte.
+3. L'`.ipa` (quando prodotto) è in **Artifacts** del job `build-ios`.
 
 Note:
-- L'immagine `macos_instance` (`ghcr.io/cirruslabs/macos-runner:sequoia`) e `QT_VERSION`
-  sono in cima al file — aggiornale se serve una versione di Xcode/Qt diversa.
-- Per costruire anche per il Simulator, usa la matrice `PLATFORM` commentata in fondo al file.
-- macOS su Cirrus è gratuito per repo pubblici entro i limiti del free tier OSS.
+- L'**executor macOS di CircleCI richiede un piano con minuti macOS** (non incluso nel
+  free tier Linux); è la differenza principale rispetto ad altri runner.
+- `xcode` (immagine), `resource_class` e `QT_VERSION` sono in cima al job — aggiornali se
+  serve una versione diversa.
+- Per il Simulator, duplica il job con `PLATFORM: SIMULATORARM64` (e adatta i path di cache,
+  che includono `OS64`).
 
 ## 4. In locale, sul tuo Mac
 
