@@ -453,9 +453,10 @@ if(WIN32)
             message(FATAL_ERROR "Compiling with Python library failed, please check whether the architecture is correct!\nCMakeError.log:\n  ${ERROR_LOG}\n\n")
         endif (NOT CAN_USE_PYTHON_LIBS)
     endif (Python_FOUND)
-else(WIN32)
+elseif(NOT IOS)
     find_package(PythonLibrary 3.8)
 endif(WIN32)
+# iOS drops PyKrita/scripting (no dynamic CPython), so Python is not searched.
 
  ########################
 #########################
