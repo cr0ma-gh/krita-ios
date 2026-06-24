@@ -100,6 +100,7 @@ cmake -S "${SRC_ROOT}" -B "${BUILD_DIR}" -G Ninja \
     -DKF_IGNORE_PLATFORM_CHECK=ON \
     -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
     -DTIFF_HAS_PSD_TAGS=OFF -DTIFF_CAN_WRITE_PSD_TAGS=OFF \
+    -DCMAKE_PROJECT_krita_INCLUDE="${SRC_ROOT}/packaging/ios/krita-ios-pre.cmake" \
     "${extra_cmake[@]}"
 cfg=$?
 
