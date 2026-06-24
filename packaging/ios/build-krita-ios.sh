@@ -73,6 +73,9 @@ if [[ -n "${QT_HOST_PATH:-}" ]]; then
     # Host Qt tools (qtpaths/moc/rcc/uic) on PATH for ECM/KDE queries and the build.
     export PATH="${QT_HOST_PATH}/bin:${PATH}"
 fi
+echo "    QT_HOST_PATH=${QT_HOST_PATH:-<unset>}"
+echo "    qtpaths=$(command -v qtpaths 2>/dev/null || echo none) qtpaths6=$(command -v qtpaths6 2>/dev/null || echo none)"
+[[ -n "${QT_HOST_PATH:-}" ]] && echo "    host bin: $(ls "${QT_HOST_PATH}/bin" 2>/dev/null | tr '\n' ' ')"
 set +e
 cmake -S "${SRC_ROOT}" -B "${BUILD_DIR}" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
