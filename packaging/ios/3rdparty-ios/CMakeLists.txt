@@ -58,6 +58,9 @@ function(krita_ios_ext NAME)
         URL          ${E_URL}
         URL_HASH     ${E_URL_HASH}
         DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/downloads
+        # Unique name: many tarballs share a basename (e.g. GitHub tag archives
+        # all download as v6.5.0.tar.gz) and would otherwise collide.
+        DOWNLOAD_NAME ${NAME}.tar.gz
         INSTALL_DIR  ${EXTPREFIX}
         DEPENDS      ${E_DEPENDS}
         CMAKE_ARGS   ${KRITA_IOS_EXT_CMAKE_ARGS} ${E_CMAKE_ARGS}
@@ -86,6 +89,7 @@ function(krita_ios_ext_autotools NAME)
         URL          ${E_URL}
         URL_HASH     ${E_URL_HASH}
         DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/downloads
+        DOWNLOAD_NAME ${NAME}.tar.gz
         DEPENDS      ${E_DEPENDS}
         BUILD_IN_SOURCE 1
         CONFIGURE_COMMAND <SOURCE_DIR>/configure
