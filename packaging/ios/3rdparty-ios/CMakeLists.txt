@@ -168,6 +168,16 @@ krita_ios_ext_autotools(ext_lcms2
     CONFIGURE_ARGS --without-jpeg --without-tiff
 )
 
+# Stub libintl — iOS has no gettext, and KI18n's find_package(LibIntl) is
+# REQUIRED. Built from the local proxy-libintl/ sources (no download).
+ExternalProject_Add(ext_proxy_libintl
+    SOURCE_DIR       ${CMAKE_CURRENT_LIST_DIR}/proxy-libintl
+    DOWNLOAD_COMMAND ""
+    INSTALL_DIR      ${EXTPREFIX}
+    CMAKE_ARGS       ${KRITA_IOS_EXT_CMAKE_ARGS}
+    BUILD_BYPRODUCTS ${EXTPREFIX}/lib/libintl.a
+)
+
 # --- KDE Frameworks 6 (CMake; need ECM + Qt6 + host Qt tools) --------------
 # Krita requires: Config WidgetsAddons Completion CoreAddons GuiAddons I18n
 # ItemViews. Built in dependency order from the KDE GitHub mirror tags.
@@ -190,7 +200,7 @@ krita_ios_ext(ext_kitemviews
     DEPENDS ext_kwidgetsaddons)
 krita_ios_ext(ext_ki18n
     URL https://github.com/KDE/ki18n/archive/refs/heads/master.tar.gz
-    DEPENDS ext_ecm)
+    DEPENDS ext_ecm ext_proxy_libintl)
 krita_ios_ext(ext_kcompletion
     URL https://github.com/KDE/kcompletion/archive/refs/heads/master.tar.gz
     DEPENDS ext_kconfig ext_kwidgetsaddons ext_kcoreaddons)
