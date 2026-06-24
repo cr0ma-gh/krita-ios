@@ -213,9 +213,12 @@ krita_ios_ext(ext_kitemviews
 krita_ios_ext(ext_ki18n
     URL https://github.com/KDE/ki18n/archive/refs/heads/master.tar.gz
     DEPENDS ext_ecm ext_proxy_libintl)
+krita_ios_ext(ext_kcodecs
+    URL https://github.com/KDE/kcodecs/archive/refs/heads/master.tar.gz
+    DEPENDS ext_ecm)
 krita_ios_ext(ext_kcompletion
     URL https://github.com/KDE/kcompletion/archive/refs/heads/master.tar.gz
-    DEPENDS ext_kconfig ext_kwidgetsaddons ext_kcoreaddons)
+    DEPENDS ext_kconfig ext_kwidgetsaddons ext_kcoreaddons ext_kcodecs)
 
 # ---------------------------------------------------------------------------
 # TODO (see dependencies.md for the full DAG, build systems and drop list):
