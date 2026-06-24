@@ -1,17 +1,23 @@
 
-if (ANDROID OR IOS)
+if (ANDROID)
     # We explicitly set QT_OPENGL_ES_3 here because Qt for some reason does
-    # not propagate this to consumers for Android (and the same is true on
-    # iOS, which is OpenGL ES only). Qt's qopengl.h promotes ES_3 -> ES_2 ->
-    # ES, which activates Krita's existing OpenGL ES code paths.
+    # not enable this for Android.
     # See also: https://bugreports.qt.io/browse/QTBUG-64703
     # This is not needed for ARM GNU/Linux environments.
     add_definitions(-DQT_OPENGL_ES_3)
-endif()
-if (ANDROID)
     if (QT_MAJOR_VERSION STREQUAL "5")
         include_directories (${Qt5AndroidExtras_INCLUDE_DIRS})
     endif()
+endif()
+if (IOS)
+    # iOS is OpenGL ES only, but (unlike Android, where Qt still defines
+    # QT_OPENGL_ES/_2) Qt6 does not propagate any of the QT_OPENGL_ES* macros
+    # to consumers here. Krita's GL code branches on QT_OPENGL_ES_2 (and there
+    # is no ES_3 -> ES_2 promotion), so define the full ES macro set ourselves
+    # to activate Krita's existing, Android-tested OpenGL ES code paths. The
+    # GLES symbols themselves (GL_RGBA16F, GL_HALF_FLOAT, *_EXT, *_OES) come
+    # from Qt's iOS GLES headers, which are included regardless.
+    add_definitions(-DQT_OPENGL_ES -DQT_OPENGL_ES_2 -DQT_OPENGL_ES_3)
 endif()
 
 add_subdirectory( tests )
