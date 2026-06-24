@@ -16,4 +16,12 @@ string(PREPEND _c
     return()\n\
 endif()\n")
 file(WRITE "${_f}" "${_c}")
-message(STATUS "patch-kconfig: kconfig_compiler skipped for cross build")
+
+# kconf_update (runs update scripts via QProcess) and kreadconfig/kwriteconfig
+# are runtime console tools unavailable/unneeded on iOS — drop them.
+set(_s "src/CMakeLists.txt")
+file(READ "${_s}" _sc)
+string(REPLACE "add_subdirectory(kconf_update)" "" _sc "${_sc}")
+string(REPLACE "add_subdirectory(kreadconfig)" "" _sc "${_sc}")
+file(WRITE "${_s}" "${_sc}")
+message(STATUS "patch-kconfig: skipped kconfig_compiler/kconf_update/kreadconfig for cross")
