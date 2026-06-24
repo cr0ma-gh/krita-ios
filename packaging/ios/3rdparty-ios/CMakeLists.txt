@@ -152,6 +152,33 @@ krita_ios_ext_autotools(ext_lcms2
     CONFIGURE_ARGS --without-jpeg --without-tiff
 )
 
+# --- KDE Frameworks 6 (CMake; need ECM + Qt6 + host Qt tools) --------------
+# Krita requires: Config WidgetsAddons Completion CoreAddons GuiAddons I18n
+# ItemViews. Built in dependency order from the KDE GitHub mirror tags.
+set(KF6_VERSION "6.5.0" CACHE STRING "")
+
+krita_ios_ext(ext_kcoreaddons
+    URL https://github.com/KDE/kcoreaddons/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    DEPENDS ext_ecm)
+krita_ios_ext(ext_kconfig
+    URL https://github.com/KDE/kconfig/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    DEPENDS ext_kcoreaddons)
+krita_ios_ext(ext_kguiaddons
+    URL https://github.com/KDE/kguiaddons/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    DEPENDS ext_ecm)
+krita_ios_ext(ext_kwidgetsaddons
+    URL https://github.com/KDE/kwidgetsaddons/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    DEPENDS ext_ecm)
+krita_ios_ext(ext_kitemviews
+    URL https://github.com/KDE/kitemviews/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    DEPENDS ext_kwidgetsaddons)
+krita_ios_ext(ext_ki18n
+    URL https://github.com/KDE/ki18n/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    DEPENDS ext_ecm)
+krita_ios_ext(ext_kcompletion
+    URL https://github.com/KDE/kcompletion/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    DEPENDS ext_kconfig ext_kwidgetsaddons ext_kcoreaddons)
+
 # ---------------------------------------------------------------------------
 # TODO (see dependencies.md for the full DAG, build systems and drop list):
 #   image:   ext_tiff ext_giflib ext_webp ext_openjpeg ext_heif ext_jpegxl
