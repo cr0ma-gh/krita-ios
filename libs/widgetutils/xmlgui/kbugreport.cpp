@@ -6,7 +6,12 @@
 
 #include "kbugreport.h"
 
+#ifdef Q_OS_IOS
+// QProcess is unavailable on iOS; the m_process member is only ever nulled.
+class QProcess;
+#else
 #include <QProcess>
+#endif
 #include <QCoreApplication>
 #include <QDialogButtonBox>
 #include <QPushButton>

@@ -171,9 +171,11 @@ bool KisKCheckAccelerators::eventFilter(QObject *obj, QEvent *e)
                 QClipboard *clipboard = QApplication::clipboard();
                 clipboard->setText(text);
             } else {
+#ifndef Q_OS_IOS
                 QProcess *script = new QProcess(this);
                 script->start(copyWidgetTextCommand.arg(text, QFile::decodeName(KLocalizedString::applicationDomain())), QStringList());
                 connect(script, SIGNAL(finished(int,QProcess::ExitStatus)), script, SLOT(deleteLater()));
+#endif
             }
             e->accept();
             return true;
