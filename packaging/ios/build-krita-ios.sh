@@ -115,7 +115,8 @@ fi
 set -e
 
 # --- 4. package ------------------------------------------------------------
-APP="${BUILD_DIR}/krita/krita.app"
+# CMake's RUNTIME_OUTPUT_DIRECTORY puts the executable bundle under bin/.
+APP="${BUILD_DIR}/bin/krita.app"
 if [[ -d "${APP}" ]]; then
     echo "==> Packaging unsigned .ipa"
     rm -rf "${WORK}/Payload"
