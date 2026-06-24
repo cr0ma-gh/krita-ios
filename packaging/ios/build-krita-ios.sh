@@ -70,6 +70,8 @@ echo "==> Configuring Krita"
 extra_cmake=()
 if [[ -n "${QT_HOST_PATH:-}" ]]; then
     extra_cmake+=( -DQT_HOST_PATH="${QT_HOST_PATH}" )
+    # Host Qt tools (qtpaths/moc/rcc/uic) on PATH for ECM/KDE queries and the build.
+    export PATH="${QT_HOST_PATH}/bin:${PATH}"
 fi
 set +e
 cmake -S "${SRC_ROOT}" -B "${BUILD_DIR}" -G Ninja \
