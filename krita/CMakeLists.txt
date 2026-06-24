@@ -186,6 +186,19 @@ if (IOS)
         list(LENGTH _krita_ios_plugins _krita_ios_plugin_count)
         message(STATUS "Krita iOS: whole-archive linking ${_krita_ios_plugin_count} static plugins")
     endif()
+
+    # exiv2 (XMP) and fontconfig (XML config) use expat, and KI18n/fontconfig
+    # use iconv. As prebuilt static libs they don't propagate these leaf deps
+    # to the final executable link, so link them here explicitly (last, so the
+    # archives that reference them are seen first).
+    find_package(EXPAT)
+    if (TARGET EXPAT::EXPAT)
+        target_link_libraries(krita PRIVATE EXPAT::EXPAT)
+    endif()
+    find_package(Iconv)
+    if (TARGET Iconv::Iconv)
+        target_link_libraries(krita PRIVATE Iconv::Iconv)
+    endif()
 endif()
 
 if (APPLE AND NOT IOS)

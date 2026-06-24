@@ -28,6 +28,15 @@ set(KRITA_IOS_PLUGIN_DENYLIST
     SPenSettingsFactory                 # Samsung S-Pen settings — Android-only hardware
     DbExplorerFactory                   # developer-only resource DB explorer — not shipped
     KritaExampleFactory                 # SDK example filter — not user facing
+    # --- excluded because their optional dependency is not built for iOS ---
+    KisWebPExportFactory                # libwebp not built
+    KisWebPImportFactory                # libwebp not built
+    KisGIFExportFactory                 # giflib not built
+    KisGIFImportFactory                 # giflib not built
+    KisRawImportFactory                 # KDcrawQt6/libraw not built
+    LutDockerPluginFactory              # OpenColorIO not built
+    MyPaintOpPluginFactory              # libmypaint not built
+    KritaSeExprGeneratorFactory         # KSeExpr not built
     CACHE STRING "Krita plugin factories excluded from the iOS static build")
 
 # --- Snapshot of all plugin factories discovered in the source tree --------
