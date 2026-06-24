@@ -400,7 +400,7 @@ endif()
 
 target_link_libraries(kritaimage PRIVATE ${FFTW3_LIBRARIES})
 
-if(APPLE)
+if(APPLE AND NOT IOS)
     target_link_libraries(kritaimage PRIVATE kritamacosutils)
 endif()
 

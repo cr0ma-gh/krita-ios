@@ -26,7 +26,7 @@ ki18n_wrap_ui(KRITA_WGCOLORSELECTOR_SOURCES
     WdgWGShadeLineEditor.ui
 )
 
-add_library(kritawgcolorselector MODULE ${KRITA_WGCOLORSELECTOR_SOURCES})
+kis_add_library(kritawgcolorselector MODULE ${KRITA_WGCOLORSELECTOR_SOURCES})
 
 target_link_libraries(kritawgcolorselector kritaui)
 

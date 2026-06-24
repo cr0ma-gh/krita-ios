@@ -7,7 +7,7 @@ set(kritargbeimport_SOURCES
     RGBEImport.cpp
 )
 
-add_library(kritargbeimport MODULE ${kritargbeimport_SOURCES})
+kis_add_library(kritargbeimport MODULE ${kritargbeimport_SOURCES})
 target_link_libraries(kritargbeimport kritaui kritargbeimportutils)
 
 install(TARGETS kritargbeimport DESTINATION ${KRITA_PLUGIN_INSTALL_DIR})
