@@ -123,9 +123,11 @@ endfunction()
 
 # Extra CMake Modules — KDE's CMake helpers, required by Krita and every KF
 # framework. Arch-independent (installs .cmake modules only).
-set(ECM_VERSION "6.10.0" CACHE STRING "")
+# iOS support in ECM/KF only exists in unreleased master (the released 6.x
+# tags lack the iOS guards, e.g. kwidgetsaddons' QProcess/kmimetypeeditor).
+# Master requires Qt >= 6.9.
 krita_ios_ext(ext_ecm
-    URL https://github.com/KDE/extra-cmake-modules/archive/refs/tags/v${ECM_VERSION}.tar.gz
+    URL https://github.com/KDE/extra-cmake-modules/archive/refs/heads/master.tar.gz
     CMAKE_ARGS -DBUILD_TESTING=OFF
 )
 
@@ -172,25 +174,25 @@ krita_ios_ext_autotools(ext_lcms2
 set(KF6_VERSION "6.10.0" CACHE STRING "")
 
 krita_ios_ext(ext_kcoreaddons
-    URL https://github.com/KDE/kcoreaddons/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    URL https://github.com/KDE/kcoreaddons/archive/refs/heads/master.tar.gz
     DEPENDS ext_ecm)
 krita_ios_ext(ext_kconfig
-    URL https://github.com/KDE/kconfig/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    URL https://github.com/KDE/kconfig/archive/refs/heads/master.tar.gz
     DEPENDS ext_kcoreaddons)
 krita_ios_ext(ext_kguiaddons
-    URL https://github.com/KDE/kguiaddons/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    URL https://github.com/KDE/kguiaddons/archive/refs/heads/master.tar.gz
     DEPENDS ext_ecm)
 krita_ios_ext(ext_kwidgetsaddons
-    URL https://github.com/KDE/kwidgetsaddons/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    URL https://github.com/KDE/kwidgetsaddons/archive/refs/heads/master.tar.gz
     DEPENDS ext_ecm)
 krita_ios_ext(ext_kitemviews
-    URL https://github.com/KDE/kitemviews/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    URL https://github.com/KDE/kitemviews/archive/refs/heads/master.tar.gz
     DEPENDS ext_kwidgetsaddons)
 krita_ios_ext(ext_ki18n
-    URL https://github.com/KDE/ki18n/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    URL https://github.com/KDE/ki18n/archive/refs/heads/master.tar.gz
     DEPENDS ext_ecm)
 krita_ios_ext(ext_kcompletion
-    URL https://github.com/KDE/kcompletion/archive/refs/tags/v${KF6_VERSION}.tar.gz
+    URL https://github.com/KDE/kcompletion/archive/refs/heads/master.tar.gz
     DEPENDS ext_kconfig ext_kwidgetsaddons ext_kcoreaddons)
 
 # ---------------------------------------------------------------------------

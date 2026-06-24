@@ -33,7 +33,7 @@ jobs:
     env:
       PLATFORM: ${{ github.event.inputs.platform || 'OS64' }}
       DEPLOYMENT_TARGET: "16.0"
-      QT_VERSION: "6.7.3"
+      QT_VERSION: "6.9.1"
       WORK: ${{ github.workspace }}/_ios
 
     steps:
