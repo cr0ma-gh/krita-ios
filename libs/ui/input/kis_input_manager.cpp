@@ -767,7 +767,11 @@ bool KisInputManager::eventFilterImpl(QEvent * event)
             d->touchStrokeBlocked = d->lastPointCount > 1;
         }
 
-#ifdef Q_OS_MAC
+// NOTE: the matching closing brace below is guarded by Q_OS_MACOS, so this
+// opening guard must use Q_OS_MACOS too. Q_OS_MAC is also defined on iOS
+// (it means "Apple platform"), which would open an 'else {' that is never
+// closed on iOS. This trackpad point-counting logic is desktop-macOS only.
+#ifdef Q_OS_MACOS
         int count = 0;
         Q_FOREACH (const QTouchEvent::TouchPoint &point, touchEvent->touchPoints()) {
             if (point.state() != Qt::TouchPointReleased) {

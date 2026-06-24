@@ -107,7 +107,10 @@ cfg=$?
 # --- 3. build --------------------------------------------------------------
 if [[ $cfg -eq 0 ]]; then
     echo "==> Building"
-    cmake --build "${BUILD_DIR}" --parallel
+    # -k 0 (ninja keep-going): don't stop at the first failure, build every
+    # independent target so a single CI run surfaces ALL compile errors at
+    # once. The orchestrator continues to packaging regardless (Phase 0).
+    cmake --build "${BUILD_DIR}" --parallel -- -k 0
 fi
 set -e
 
