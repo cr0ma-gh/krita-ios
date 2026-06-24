@@ -41,11 +41,22 @@ echo "    sdk      : $(xcrun --sdk iphoneos --show-sdk-version)"
 
 mkdir -p "${EXTPREFIX}"
 
+# Qt-dependent deps (KF6 frameworks, quazip) need the iOS Qt + host Qt tools.
+qt_args=()
+if [[ -n "${QT_IOS_ROOT:-}" ]]; then
+    qt_args+=( -DQT_IOS_ROOT="${QT_IOS_ROOT}" )
+fi
+if [[ -n "${QT_HOST_PATH:-}" ]]; then
+    qt_args+=( -DQT_HOST_PATH="${QT_HOST_PATH}" )
+    export PATH="${QT_HOST_PATH}/bin:${PATH}"   # moc/rcc/uic/qtpaths for KF6 builds
+fi
+
 cmake -S "${SRC_ROOT}/packaging/ios/3rdparty-ios" -B "${BUILD_DIR}" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
     -DPLATFORM="${PLATFORM}" \
     -DDEPLOYMENT_TARGET="${DEPLOYMENT_TARGET}" \
-    -DEXTPREFIX="${EXTPREFIX}"
+    -DEXTPREFIX="${EXTPREFIX}" \
+    "${qt_args[@]}"
 
 # ExternalProject targets serialise on their DEPENDS, so a plain build resolves
 # the dependency order. Use --parallel for the independent leaves.

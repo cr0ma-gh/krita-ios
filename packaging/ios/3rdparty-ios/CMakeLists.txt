@@ -44,11 +44,20 @@ set(KRITA_IOS_EXT_CMAKE_ARGS
     -DPLATFORM=${PLATFORM}
     -DDEPLOYMENT_TARGET=${DEPLOYMENT_TARGET}
     -DCMAKE_INSTALL_PREFIX=${EXTPREFIX}
+    -DKRITA_DEPS_INSTALL_PREFIX=${EXTPREFIX}   # so sub-builds find_package() each other
     -DCMAKE_PREFIX_PATH=${EXTPREFIX}
     -DCMAKE_BUILD_TYPE=Release
     -DBUILD_SHARED_LIBS=OFF        # iOS is static-only
     -DBUILD_TESTING=OFF
 )
+# Qt-dependent deps (KF6 frameworks, quazip) need the iOS Qt for libraries and
+# the host Qt for moc/rcc/uic. Forward both when the orchestrator provides them.
+if(DEFINED QT_IOS_ROOT AND QT_IOS_ROOT)
+    list(APPEND KRITA_IOS_EXT_CMAKE_ARGS -DQT_IOS_ROOT=${QT_IOS_ROOT})
+endif()
+if(DEFINED QT_HOST_PATH AND QT_HOST_PATH)
+    list(APPEND KRITA_IOS_EXT_CMAKE_ARGS -DQT_HOST_PATH=${QT_HOST_PATH})
+endif()
 
 # Helper: declare a CMake-based dependency that installs into EXTPREFIX.
 #   krita_ios_ext(<name> URL <url> [DEPENDS ...] [CMAKE_ARGS ...])

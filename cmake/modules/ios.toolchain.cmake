@@ -93,5 +93,12 @@ if(DEFINED KRITA_DEPS_INSTALL_PREFIX)
     list(APPEND CMAKE_PREFIX_PATH "${KRITA_DEPS_INSTALL_PREFIX}")
 endif()
 
+# The iOS Qt prefix must also be searchable by find_package (MODE_PACKAGE is
+# ONLY, so CMAKE_PREFIX_PATH alone is not consulted — it must be in the root).
+if(DEFINED QT_IOS_ROOT AND QT_IOS_ROOT)
+    list(APPEND CMAKE_FIND_ROOT_PATH "${QT_IOS_ROOT}")
+    list(APPEND CMAKE_PREFIX_PATH "${QT_IOS_ROOT}")
+endif()
+
 message(STATUS "Krita iOS toolchain: PLATFORM=${PLATFORM} "
                "triple=${_KRITA_IOS_TRIPLE} sysroot=${CMAKE_OSX_SYSROOT}")
