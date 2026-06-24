@@ -8,25 +8,32 @@ set(libkritaconverter_LIB_SRCS
     kis_open_raster_stack_save_visitor.cpp
     )
 
+# The shared OpenRaster converter code is built once into a static helper
+# library. When the import and export plugins are linked statically into one
+# executable (iOS), compiling these sources into both plugins would otherwise
+# produce duplicate symbols (OraConverter and friends are QObjects, so their
+# moc'd staticMetaObject/vtable symbols are strong). On other platforms each
+# plugin still ends up with its own copy, exactly as before.
+add_library(kritaoracommon STATIC ${libkritaconverter_LIB_SRCS})
+target_link_libraries(kritaoracommon PUBLIC kritaui)
+
 set(kritaoraimport_SOURCES
     ora_import.cc
-    ${libkritaconverter_LIB_SRCS}
     )
 
 kis_add_library(kritaoraimport MODULE ${kritaoraimport_SOURCES})
 
-target_link_libraries(kritaoraimport kritaui )
+target_link_libraries(kritaoraimport kritaui kritaoracommon)
 
 install(TARGETS kritaoraimport  DESTINATION ${KRITA_PLUGIN_INSTALL_DIR})
 
 set(kritaoraexport_SOURCES
     ora_export.cc
-    ${libkritaconverter_LIB_SRCS}
     )
 
 kis_add_library(kritaoraexport MODULE ${kritaoraexport_SOURCES})
 
-target_link_libraries(kritaoraexport kritaui kritaimpex)
+target_link_libraries(kritaoraexport kritaui kritaimpex kritaoracommon)
 
 install(TARGETS kritaoraexport  DESTINATION ${KRITA_PLUGIN_INSTALL_DIR})
 

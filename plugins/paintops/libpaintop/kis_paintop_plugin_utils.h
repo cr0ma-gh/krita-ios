@@ -38,7 +38,7 @@ namespace KisPaintOpPluginUtils {
  * @param pi - The paint information.
  * @see KisPaintInformation
  */
-KisSpacingInformation effectiveSpacing(qreal dabWidth,
+inline KisSpacingInformation effectiveSpacing(qreal dabWidth,
                                        qreal dabHeight,
                                        bool isotropicSpacing,
                                        qreal rotation,
@@ -79,7 +79,7 @@ KisSpacingInformation effectiveSpacing(qreal dabWidth,
  * @param pi - The paint information.
  * @see KisPaintInformation
  */
-KisTimingInformation effectiveTiming(const KisAirbrushOptionData *airbrushOption,
+inline KisTimingInformation effectiveTiming(const KisAirbrushOptionData *airbrushOption,
                                      const KisRateOption *rateOption,
                                      const KisPaintInformation &pi)
 {

@@ -8,7 +8,13 @@ add_subdirectory(advancedcolorselector)
 add_subdirectory(presetdocker)
 add_subdirectory(historydocker)
 add_subdirectory(channeldocker)
-add_subdirectory(artisticcolorselector)
+if (NOT IOS)
+    # Temporarily excluded on iOS: its KisColorSelector widget class name
+    # collides with advancedcolorselector's, and its plugin factory is named
+    # PaletteDockPluginFactory (a copy-paste from palettedocker), both of which
+    # break the single-binary static link. TODO: rename and re-enable.
+    add_subdirectory(artisticcolorselector)
+endif()
 add_subdirectory(tasksetdocker)
 add_subdirectory(compositiondocker)
 add_subdirectory(patterndocker)
