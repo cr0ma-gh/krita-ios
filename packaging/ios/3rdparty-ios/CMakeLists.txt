@@ -274,6 +274,15 @@ krita_ios_ext(ext_exiv2
     DEPENDS ext_expat ext_zlib
     CMAKE_ARGS -DEXIV2_BUILD_SAMPLES=OFF -DEXIV2_BUILD_EXIV2_COMMAND=OFF -DEXIV2_ENABLE_BMFF=OFF -DEXIV2_BUILD_UNIT_TESTS=OFF -DEXIV2_ENABLE_INIH=OFF)
 
+# xsimd (header-only) + QuaZip — both REQUIRED by Krita.
+krita_ios_ext(ext_xsimd
+    URL https://github.com/xtensor-stack/xsimd/archive/refs/tags/13.0.0.tar.gz
+    CMAKE_ARGS -DBUILD_TESTS=OFF)
+krita_ios_ext(ext_quazip
+    URL https://github.com/stachenov/quazip/archive/refs/tags/v1.4.tar.gz
+    DEPENDS ext_zlib
+    CMAKE_ARGS -DQUAZIP_QT_MAJOR_VERSION=6 -DQUAZIP_INSTALL=ON -DBUILD_SHARED_LIBS=OFF)
+
 # libtiff — made REQUIRED by Krita's CheckLibTIFFPSDSupport module.
 krita_ios_ext(ext_tiff
     URL https://download.osgeo.org/libtiff/tiff-4.7.0.tar.gz

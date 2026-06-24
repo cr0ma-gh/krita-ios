@@ -248,6 +248,9 @@ if(APPLE AND NOT IOS)
     target_sources(krita PRIVATE ${KRITA_ASSET_KRZ_ICNS})
 
     install(TARGETS krita ${INSTALL_TARGETS_DEFAULT_ARGS} BUNDLE DESTINATION bin)
+elseif(IOS)
+    # krita is a MACOSX_BUNDLE on iOS too, so it needs a BUNDLE DESTINATION.
+    install(TARGETS krita ${INSTALL_TARGETS_DEFAULT_ARGS} BUNDLE DESTINATION bin)
 else()
     install(TARGETS krita ${INSTALL_TARGETS_DEFAULT_ARGS})
 endif()
