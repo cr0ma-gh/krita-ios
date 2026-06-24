@@ -11,15 +11,27 @@ gratis per repo pubblici. Qt **6.9.1** (host+iOS via `install-qt-action`).
 
 ## Stato attuale (dopo 18 run CI, 21 commit)
 
-✅ **Funziona end-to-end:** pipeline CI, superbuild dipendenze, lettura diagnostica.
-✅ **Compilano e si installano per iOS (arm64):** zlib, eigen, libpng, libjpeg-turbo,
-   lcms2, ECM, **proxy-libintl**, e **5 dei 7 KF6 framework**: KCoreAddons, KGuiAddons,
-   KI18n (+ KItemViews/KWidgetsAddons in corso).
-⛔ **Muro attuale:** `KConfig` → il suo generatore `kconfig_compiler_kf6` è un **tool host**
-   ma viene compilato per iOS e non linka (`_qt_main_wrapper` undefined). Vedi §4.
+✅ **Funziona end-to-end:** pipeline CI, superbuild dipendenze (a due passi host+target),
+   lettura diagnostica.
+✅ **Il superbuild dipendenze COMPLETA** per iOS (arm64): zlib, eigen, libpng,
+   libjpeg-turbo, lcms2, ECM, proxy-libintl, **tutti gli 8 KF6 framework** (KCoreAddons,
+   KConfig, KGuiAddons, KWidgetsAddons, KItemViews, KI18n, KCodecs, KCompletion,
+   KColorScheme), Boost, Immer/Zug/Lager, expat, FreeType, HarfBuzz, exiv2, libtiff,
+   libunibreak.
+✅ **Host-tooling KDE RISOLTO** (build a due passi: `packaging/ios/host-tools/` +
+   `KF6_HOST_TOOLING` + `patches/patch-kconfig.cmake`).
+✅ **Il configure di Krita gira** e trova Qt6 + tutti gli 8 KF6 + le dipendenze sopra.
+⛔ **Unico blocco al configure:** `Fontconfig` (REQUIRED). Il build autotools cross
+   fallisce: i test usano `system()` (assente su iOS) e il generatore host `fc-lang`
+   è compilato per iOS (`sys/types.h not found`). Serve `CC_FOR_BUILD=clang` host per
+   fc-lang + saltare i test (o un host-build di fc-lang) — il classico inferno
+   cross-compile di fontconfig, meglio iterato su un Mac.
 
-Restano poi: completare i 7 framework, **~30 altre dipendenze**, la **compilazione di
-Krita** (enorme), il **link statico** dei plugin. Realisticamente settimane.
+Le dipendenze **opzionali** (OpenEXR, OpenColorIO, WebP, MyPaint, OpenJPEG, GIF, HEIF,
+JPEGXL, FFTW, GSL, QuaZip, Poppler, MLT) sono saltate: riducono le feature ma **non
+bloccano** il configure. Dopo Fontconfig: configure completo → **compilazione di Krita**
+(un milione di righe, molti `#ifdef Q_OS_IOS`) → **link statico** dei 116 plugin → `.ipa`.
+Realisticamente settimane.
 
 ---
 
