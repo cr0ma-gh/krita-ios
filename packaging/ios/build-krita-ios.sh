@@ -92,6 +92,7 @@ cmake -S "${SRC_ROOT}" -B "${BUILD_DIR}" -G Ninja \
     -DCMAKE_PREFIX_PATH="${DEPS_PREFIX};${QT_IOS_ROOT}" \
     -DBUILD_WITH_QT6=ON -DALLOW_UNSTABLE=QT6 \
     -DBUILD_TESTING=OFF \
+    -DKF_IGNORE_PLATFORM_CHECK=ON \
     "${extra_cmake[@]}"
 cfg=$?
 

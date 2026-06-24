@@ -49,6 +49,7 @@ set(KRITA_IOS_EXT_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=Release
     -DBUILD_SHARED_LIBS=OFF        # iOS is static-only
     -DBUILD_TESTING=OFF
+    -DKF_IGNORE_PLATFORM_CHECK=ON  # KDE Frameworks don't list iOS as supported yet
 )
 # Qt-dependent deps (KF6 frameworks, quazip) need the iOS Qt for libraries and
 # the host Qt for moc/rcc/uic. Forward both when the orchestrator provides them.
