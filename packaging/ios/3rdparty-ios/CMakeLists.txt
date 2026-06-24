@@ -284,10 +284,37 @@ krita_ios_ext(ext_tiff
 # Fontconfig + libunibreak — the last REQUIRED deps (autotools).
 krita_ios_ext_autotools(ext_libunibreak
     URL https://github.com/adah1972/libunibreak/releases/download/libunibreak_6_1/libunibreak-6.1.tar.gz)
-krita_ios_ext_autotools(ext_fontconfig
+# Fontconfig needs special care: its host generator fc-lang must build for the
+# HOST (CC_FOR_BUILD), and its tools/tests use system() (absent on iOS) so we
+# restrict SUBDIRS to the library and its generators.
+if(PLATFORM STREQUAL "SIMULATORARM64")
+    set(_fc_sdk iphonesimulator)
+    set(_fc_min "-mios-simulator-version-min=${DEPLOYMENT_TARGET}")
+else()
+    set(_fc_sdk iphoneos)
+    set(_fc_min "-miphoneos-version-min=${DEPLOYMENT_TARGET}")
+endif()
+execute_process(COMMAND xcrun --sdk ${_fc_sdk} --show-sdk-path
+    OUTPUT_VARIABLE _fc_sysroot OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND xcrun --sdk ${_fc_sdk} --find clang
+    OUTPUT_VARIABLE _fc_cc OUTPUT_STRIP_TRAILING_WHITESPACE)
+set(_fc_flags "-arch arm64 -isysroot ${_fc_sysroot} ${_fc_min}")
+ExternalProject_Add(ext_fontconfig
     URL https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.15.0.tar.gz
+    DOWNLOAD_NAME ext_fontconfig.tar.gz
+    DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/downloads
     DEPENDS ext_freetype ext_expat
-    CONFIGURE_ARGS --disable-docs --enable-libxml2=no)
+    BUILD_IN_SOURCE 1
+    CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env
+        "PKG_CONFIG_PATH=${EXTPREFIX}/lib/pkgconfig" "CC_FOR_BUILD=clang"
+        <SOURCE_DIR>/configure --prefix=${EXTPREFIX}
+        --host=arm-apple-darwin --disable-shared --enable-static
+        --disable-docs --enable-libxml2=no
+        "CC=${_fc_cc}" "CFLAGS=${_fc_flags} -I${EXTPREFIX}/include"
+        "LDFLAGS=${_fc_flags} -L${EXTPREFIX}/lib"
+    BUILD_COMMAND make "SUBDIRS=fontconfig fc-lang fc-case src"
+    INSTALL_COMMAND sh -c "make 'SUBDIRS=fontconfig src' install && cp -f fontconfig.pc '${EXTPREFIX}/lib/pkgconfig/' 2>/dev/null || true"
+)
 
 # ---------------------------------------------------------------------------
 # TODO (see dependencies.md for the full DAG, build systems and drop list):
