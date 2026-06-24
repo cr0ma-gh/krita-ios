@@ -185,10 +185,12 @@ set(KF6_VERSION "6.10.0" CACHE STRING "")
 
 krita_ios_ext(ext_kcoreaddons
     URL https://github.com/KDE/kcoreaddons/archive/refs/heads/master.tar.gz
-    DEPENDS ext_ecm)
+    DEPENDS ext_ecm
+    CMAKE_ARGS -DKCOREADDONS_USE_QML=OFF)   # QML plugin uses QProcess (no iOS)
 krita_ios_ext(ext_kconfig
     URL https://github.com/KDE/kconfig/archive/refs/heads/master.tar.gz
-    DEPENDS ext_kcoreaddons)
+    DEPENDS ext_kcoreaddons
+    CMAKE_ARGS -DKCONFIG_USE_QML=OFF)       # Krita uses the C++ libs, not QML
 krita_ios_ext(ext_kguiaddons
     URL https://github.com/KDE/kguiaddons/archive/refs/heads/master.tar.gz
     DEPENDS ext_ecm)
