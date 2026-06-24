@@ -37,7 +37,10 @@ set(KRITA_IOS_PLUGIN_DENYLIST
     LutDockerPluginFactory              # OpenColorIO not built
     MyPaintOpPluginFactory              # libmypaint not built
     KritaSeExprGeneratorFactory         # KSeExpr not built
-    CACHE STRING "Krita plugin factories excluded from the iOS static build")
+    )
+# NOTE: a plain variable (not CACHE) on purpose — the iOS build dir is cached
+# across CI runs, and a CACHE value would be frozen at its first-configure
+# contents, silently ignoring later edits to this denylist.
 
 # --- Snapshot of all plugin factories discovered in the source tree --------
 # Generated 2026-06 from K_PLUGIN_FACTORY_WITH_JSON occurrences (124 distinct,
@@ -167,7 +170,7 @@ set(KRITA_IOS_ALL_PLUGIN_FACTORIES
     WGColorSelectorPluginFactory
     WaveletDecomposeFactory
     XCFImportFactory
-    CACHE STRING "Snapshot of all Krita plugin factories (regenerate by scanning)")
+    )  # plain variable (not CACHE): the iOS build dir is cached across runs
 
 # --- Generator -------------------------------------------------------------
 # krita_ios_generate_plugin_imports(

@@ -195,10 +195,10 @@ if (IOS)
     if (TARGET EXPAT::EXPAT)
         target_link_libraries(krita PRIVATE EXPAT::EXPAT)
     endif()
-    find_package(Iconv)
-    if (TARGET Iconv::Iconv)
-        target_link_libraries(krita PRIVATE Iconv::Iconv)
-    endif()
+    # iconv is a separate system library on Apple platforms; link it directly.
+    # FindIconv can misdetect it as built into libc when cross-compiling for
+    # iOS, leaving _iconv* undefined, so use the bare library name (-liconv).
+    target_link_libraries(krita PRIVATE iconv)
 endif()
 
 if (APPLE AND NOT IOS)
