@@ -2,10 +2,18 @@ include(ECMQmlModule)
 
 if (QT_MAJOR_VERSION STREQUAL "6")
 
+    # iOS is static-only (BUILD_SHARED_LIBS=OFF); a SHARED QML module conflicts
+    # with the implicit STATIC, so omit SHARED there.
+    if (IOS)
+        set(_kritaqmlcomponents_linkage "")
+    else()
+        set(_kritaqmlcomponents_linkage SHARED)
+    endif()
+
     ecm_add_qml_module(kritaqmlcomponents
         URI "org.krita.components"
         VERSION 1.0
-        SHARED
+        ${_kritaqmlcomponents_linkage}
         GENERATE_PLUGIN_SOURCE
     )
 
