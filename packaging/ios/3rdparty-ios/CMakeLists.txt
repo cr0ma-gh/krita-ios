@@ -65,6 +65,42 @@ function(krita_ios_ext NAME)
     )
 endfunction()
 
+# Helper: declare an autotools (./configure) dependency cross-compiled for iOS.
+# Many of Krita's deps (lcms2, fribidi, ...) ship autotools, not CMake.
+#   krita_ios_ext_autotools(<name> URL <url> [DEPENDS ...] [CONFIGURE_ARGS ...])
+function(krita_ios_ext_autotools NAME)
+    cmake_parse_arguments(E "" "URL;URL_HASH" "DEPENDS;CONFIGURE_ARGS" ${ARGN})
+    if(PLATFORM STREQUAL "SIMULATORARM64")
+        set(_sdk iphonesimulator)
+        set(_minflag "-mios-simulator-version-min=${DEPLOYMENT_TARGET}")
+    else()
+        set(_sdk iphoneos)
+        set(_minflag "-miphoneos-version-min=${DEPLOYMENT_TARGET}")
+    endif()
+    execute_process(COMMAND xcrun --sdk ${_sdk} --show-sdk-path
+        OUTPUT_VARIABLE _sysroot OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND xcrun --sdk ${_sdk} --find clang
+        OUTPUT_VARIABLE _cc OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(_flags "-arch arm64 -isysroot ${_sysroot} ${_minflag}")
+    ExternalProject_Add(${NAME}
+        URL          ${E_URL}
+        URL_HASH     ${E_URL_HASH}
+        DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/downloads
+        DEPENDS      ${E_DEPENDS}
+        BUILD_IN_SOURCE 1
+        CONFIGURE_COMMAND <SOURCE_DIR>/configure
+            --prefix=${EXTPREFIX}
+            --host=arm-apple-darwin
+            --disable-shared --enable-static
+            "CC=${_cc}"
+            "CFLAGS=${_flags}"
+            "LDFLAGS=${_flags}"
+            ${E_CONFIGURE_ARGS}
+        BUILD_COMMAND make -j4
+        INSTALL_COMMAND make install
+    )
+endfunction()
+
 # ---------------------------------------------------------------------------
 # Representative foundational packages. Pin versions/URLs against
 # krita-deps-management; the values below are reasonable starting points and
@@ -100,10 +136,12 @@ krita_ios_ext(ext_png
     CMAKE_ARGS -DPNG_SHARED=OFF -DPNG_TESTS=OFF -DPNG_EXECUTABLES=OFF
 )
 
-# Little CMS — color management; needed by Krita core.
+# Little CMS — color management. Autotools build (the tarball has no
+# CMakeLists.txt); skip the sample tools that would need jpeg/tiff.
 set(LCMS2_VERSION "2.16" CACHE STRING "")
-krita_ios_ext(ext_lcms2
+krita_ios_ext_autotools(ext_lcms2
     URL https://github.com/mm2/Little-CMS/releases/download/lcms${LCMS2_VERSION}/lcms2-${LCMS2_VERSION}.tar.gz
+    CONFIGURE_ARGS --without-jpeg --without-tiff
 )
 
 # ---------------------------------------------------------------------------
