@@ -65,6 +65,16 @@
 #define GL_RGBA16_EXT 0x805B
 #endif
 
+// GL_OES_texture_half_float / GL_EXT_color_buffer_float: present on some GLES
+// targets but not in Qt's iOS ES3 core headers, which only expose the
+// unsuffixed GL_HALF_FLOAT / GL_RGBA32F. Provide the suffixed aliases.
+#ifndef GL_HALF_FLOAT_OES
+#define GL_HALF_FLOAT_OES 0x8D61
+#endif
+#ifndef GL_RGBA32F_EXT
+#define GL_RGBA32F_EXT 0x8814
+#endif
+
 //#define DEBUG_BUFFER_REALLOCATION
 
 
