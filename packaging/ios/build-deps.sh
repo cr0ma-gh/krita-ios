@@ -49,8 +49,20 @@ fi
 if [[ -n "${QT_HOST_PATH:-}" ]]; then
     qt_args+=( -DQT_HOST_PATH="${QT_HOST_PATH}" )
     export PATH="${QT_HOST_PATH}/bin:${PATH}"   # moc/rcc/uic/qtpaths for KF6 builds
+
+    # --- Pass 1: native host build of the KDE code-generation tools ----------
+    # kconfig_compiler etc. must run on the host. Build them natively, then point
+    # the cross frameworks at them via KF6_HOST_TOOLING (see KF6ConfigConfig).
+    HOST_PREFIX="${EXTPREFIX}-host"
+    echo "==> Building host KDE tools -> ${HOST_PREFIX}"
+    cmake -S "${SRC_ROOT}/packaging/ios/host-tools" -B "${HOST_PREFIX}.build" -G Ninja \
+        -DEXTPREFIX="${HOST_PREFIX}" \
+        -DQT_HOST_PATH="${QT_HOST_PATH}"
+    cmake --build "${HOST_PREFIX}.build"
+    qt_args+=( -DKF6_HOST_TOOLING="${HOST_PREFIX}/lib/cmake" )
 fi
 
+# --- Pass 2: the iOS cross superbuild --------------------------------------
 cmake -S "${SRC_ROOT}/packaging/ios/3rdparty-ios" -B "${BUILD_DIR}" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
     -DPLATFORM="${PLATFORM}" \

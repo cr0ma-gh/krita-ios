@@ -59,11 +59,19 @@ endif()
 if(DEFINED QT_HOST_PATH AND QT_HOST_PATH)
     list(APPEND KRITA_IOS_EXT_CMAKE_ARGS -DQT_HOST_PATH=${QT_HOST_PATH})
 endif()
+# Host KDE tools (kconfig_compiler, ...) for cross builds — see KF6ConfigConfig.
+if(DEFINED KF6_HOST_TOOLING AND KF6_HOST_TOOLING)
+    list(APPEND KRITA_IOS_EXT_CMAKE_ARGS -DKF6_HOST_TOOLING=${KF6_HOST_TOOLING})
+endif()
 
 # Helper: declare a CMake-based dependency that installs into EXTPREFIX.
 #   krita_ios_ext(<name> URL <url> [DEPENDS ...] [CMAKE_ARGS ...])
 function(krita_ios_ext NAME)
-    cmake_parse_arguments(E "" "URL;URL_HASH" "DEPENDS;CMAKE_ARGS" ${ARGN})
+    cmake_parse_arguments(E "" "URL;URL_HASH;PATCH" "DEPENDS;CMAKE_ARGS" ${ARGN})
+    set(_patch "")
+    if(E_PATCH)
+        set(_patch ${CMAKE_COMMAND} -P ${E_PATCH})
+    endif()
     ExternalProject_Add(${NAME}
         URL          ${E_URL}
         URL_HASH     ${E_URL_HASH}
@@ -73,6 +81,7 @@ function(krita_ios_ext NAME)
         DOWNLOAD_NAME ${NAME}.tar.gz
         INSTALL_DIR  ${EXTPREFIX}
         DEPENDS      ${E_DEPENDS}
+        PATCH_COMMAND ${_patch}
         CMAKE_ARGS   ${KRITA_IOS_EXT_CMAKE_ARGS} ${E_CMAKE_ARGS}
         BUILD_BYPRODUCTS ${EXTPREFIX}/lib/lib${NAME}.a
     )
@@ -190,7 +199,8 @@ krita_ios_ext(ext_kcoreaddons
 krita_ios_ext(ext_kconfig
     URL https://github.com/KDE/kconfig/archive/refs/heads/master.tar.gz
     DEPENDS ext_kcoreaddons
-    CMAKE_ARGS -DKCONFIG_USE_QML=OFF)       # Krita uses the C++ libs, not QML
+    CMAKE_ARGS -DKCONFIG_USE_QML=OFF        # Krita uses the C++ libs, not QML
+    PATCH ${CMAKE_CURRENT_LIST_DIR}/patches/patch-kconfig.cmake)  # use host kconfig_compiler
 krita_ios_ext(ext_kguiaddons
     URL https://github.com/KDE/kguiaddons/archive/refs/heads/master.tar.gz
     DEPENDS ext_ecm)

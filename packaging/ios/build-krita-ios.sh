@@ -80,6 +80,10 @@ if [[ -n "${QT_HOST_PATH:-}" ]]; then
         extra_cmake+=( -DQUERY_EXECUTABLE="${QT_HOST_PATH}/bin/qtpaths" )
     fi
 fi
+# Host KDE tools (kconfig_compiler) for Krita's own .kcfg generation.
+if [[ -d "${DEPS_PREFIX}-host/lib/cmake" ]]; then
+    extra_cmake+=( -DKF6_HOST_TOOLING="${DEPS_PREFIX}-host/lib/cmake" )
+fi
 echo "    QT_HOST_PATH=${QT_HOST_PATH:-<unset>}"
 echo "    qtpaths=$(command -v qtpaths 2>/dev/null || echo none) qtpaths6=$(command -v qtpaths6 2>/dev/null || echo none)"
 [[ -n "${QT_HOST_PATH:-}" ]] && echo "    host bin: $(ls "${QT_HOST_PATH}/bin" 2>/dev/null | tr '\n' ' ')"
