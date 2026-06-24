@@ -74,6 +74,15 @@ jobs:
           # orchestrator/docs — so Krita-configure/compile iterations stay fast.
           key: ios-deps-${{ env.PLATFORM }}-${{ hashFiles('packaging/ios/3rdparty-ios/**', 'packaging/ios/host-tools/**', 'cmake/modules/ios.toolchain.cmake') }}
 
+      # Krita build dir, kept across runs so ninja recompiles incrementally
+      # during the compile phase (only the files a fix touched).
+      - name: Cache Krita build dir
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.WORK }}/build-${{ env.PLATFORM }}
+          key: ios-kbuild-${{ env.PLATFORM }}-${{ github.run_id }}
+          restore-keys: ios-kbuild-${{ env.PLATFORM }}-
+
       - name: Build Krita (deps + configure + build + package)
         run: |
           mkdir -p "$WORK"
