@@ -111,13 +111,15 @@ function(krita_ios_ext_autotools NAME)
         DOWNLOAD_NAME ${NAME}.tar.gz
         DEPENDS      ${E_DEPENDS}
         BUILD_IN_SOURCE 1
-        CONFIGURE_COMMAND <SOURCE_DIR>/configure
+        CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env
+            "PKG_CONFIG_PATH=${EXTPREFIX}/lib/pkgconfig"
+            <SOURCE_DIR>/configure
             --prefix=${EXTPREFIX}
             --host=arm-apple-darwin
             --disable-shared --enable-static
             "CC=${_cc}"
-            "CFLAGS=${_flags}"
-            "LDFLAGS=${_flags}"
+            "CFLAGS=${_flags} -I${EXTPREFIX}/include"
+            "LDFLAGS=${_flags} -L${EXTPREFIX}/lib"
             ${E_CONFIGURE_ARGS}
         BUILD_COMMAND make -j4
         INSTALL_COMMAND make install
@@ -271,6 +273,21 @@ krita_ios_ext(ext_exiv2
     URL https://github.com/Exiv2/exiv2/archive/refs/tags/v0.28.5.tar.gz
     DEPENDS ext_expat ext_zlib
     CMAKE_ARGS -DEXIV2_BUILD_SAMPLES=OFF -DEXIV2_BUILD_EXIV2_COMMAND=OFF -DEXIV2_ENABLE_BMFF=OFF -DEXIV2_BUILD_UNIT_TESTS=OFF -DEXIV2_ENABLE_INIH=OFF)
+
+# libtiff — made REQUIRED by Krita's CheckLibTIFFPSDSupport module.
+krita_ios_ext(ext_tiff
+    URL https://download.osgeo.org/libtiff/tiff-4.7.0.tar.gz
+    DEPENDS ext_jpeg ext_zlib
+    CMAKE_ARGS -Dtiff-tools=OFF -Dtiff-tests=OFF -Dtiff-docs=OFF -Dtiff-contrib=OFF
+               -Djbig=OFF -Dlzma=OFF -Dzstd=OFF -Dwebp=OFF -Dlerc=OFF)
+
+# Fontconfig + libunibreak — the last REQUIRED deps (autotools).
+krita_ios_ext_autotools(ext_libunibreak
+    URL https://github.com/adah1972/libunibreak/releases/download/libunibreak_6_1/libunibreak-6.1.tar.gz)
+krita_ios_ext_autotools(ext_fontconfig
+    URL https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.15.0.tar.gz
+    DEPENDS ext_freetype ext_expat
+    CONFIGURE_ARGS --disable-docs --enable-libxml2=no)
 
 # ---------------------------------------------------------------------------
 # TODO (see dependencies.md for the full DAG, build systems and drop list):
