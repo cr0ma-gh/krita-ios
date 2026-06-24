@@ -1,10 +1,14 @@
 
-if (ANDROID)
+if (ANDROID OR IOS)
     # We explicitly set QT_OPENGL_ES_3 here because Qt for some reason does
-    # not enable this for Android.
+    # not propagate this to consumers for Android (and the same is true on
+    # iOS, which is OpenGL ES only). Qt's qopengl.h promotes ES_3 -> ES_2 ->
+    # ES, which activates Krita's existing OpenGL ES code paths.
     # See also: https://bugreports.qt.io/browse/QTBUG-64703
     # This is not needed for ARM GNU/Linux environments.
     add_definitions(-DQT_OPENGL_ES_3)
+endif()
+if (ANDROID)
     if (QT_MAJOR_VERSION STREQUAL "5")
         include_directories (${Qt5AndroidExtras_INCLUDE_DIRS})
     endif()
