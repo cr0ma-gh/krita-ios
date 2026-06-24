@@ -89,7 +89,7 @@ find_library(LibMyPaint_LIBRARY
     HINTS ${MYPAINT_PKGCONF_LIBRARY_DIRS} ${MYPAINT_PKGCONF_LIBDIR}
 )
 
-if (NOT LibMyPaint_VERSION)
+if (NOT LibMyPaint_VERSION AND LibMyPaint_INCLUDE_DIR)
     file(READ ${LibMyPaint_INCLUDE_DIR}/config.h _version_content)
 
     string(REGEX MATCH "#define PACKAGE_VERSION[ \t]+\"(.+)\"" _version_match ${_version_content})

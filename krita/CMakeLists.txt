@@ -87,13 +87,13 @@ if (WIN32)
             ${CMAKE_CURRENT_BINARY_DIR}/kritafile.ico
         DESTINATION ${CMAKE_INSTALL_PREFIX}/installer
     )
-elseif(APPLE)
+elseif(APPLE AND NOT IOS)
     if(${XCODE_VERSION} VERSION_GREATER_EQUAL "26.0")
       set_source_files_properties(${ASSETS_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     else()
       ecm_add_app_icon(krita_SRCS OUTFILE_BASENAME krita ICONS ${ICON_SRCS})
     endif()
-else()
+elseif(NOT APPLE)
     ecm_add_app_icon(krita_SRCS ICONS ${ICON_SRCS})
 endif()
 
