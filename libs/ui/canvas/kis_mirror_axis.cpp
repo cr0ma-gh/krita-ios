@@ -38,6 +38,13 @@
     // macOS.SDK openGL does not define GL_MULTISAMPLE_EXT
     #define GL_MULTISAMPLE_EXT GL_MULTISAMPLE
 #endif
+#ifndef GL_MULTISAMPLE_EXT
+    // OpenGL ES (iOS) has no client-side multisample toggle, so neither
+    // GL_MULTISAMPLE_EXT nor GL_MULTISAMPLE is declared. hasMultisample is
+    // always false on GLES (it requires desktop multisample extensions), so
+    // this enum is never actually passed to glEnable at runtime.
+    #define GL_MULTISAMPLE_EXT 0x809D
+#endif
 
 class KisMirrorAxis::Private
 {
