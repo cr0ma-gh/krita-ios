@@ -274,6 +274,10 @@ krita_ios_ext(ext_exiv2
     DEPENDS ext_expat ext_zlib
     CMAKE_ARGS -DEXIV2_BUILD_SAMPLES=OFF -DEXIV2_BUILD_EXIV2_COMMAND=OFF -DEXIV2_ENABLE_BMFF=OFF -DEXIV2_BUILD_UNIT_TESTS=OFF -DEXIV2_ENABLE_INIH=OFF)
 
+# GSL — used (unguarded) by KisBezierUtils for curve fitting.
+krita_ios_ext_autotools(ext_gsl
+    URL https://ftp.gnu.org/gnu/gsl/gsl-2.8.tar.gz)
+
 # xsimd (header-only) + QuaZip — both REQUIRED by Krita.
 krita_ios_ext(ext_xsimd
     URL https://github.com/xtensor-stack/xsimd/archive/refs/tags/13.0.0.tar.gz
