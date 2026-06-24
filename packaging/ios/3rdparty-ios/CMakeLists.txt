@@ -303,8 +303,10 @@ execute_process(COMMAND xcrun --sdk ${_fc_sdk} --find clang
     OUTPUT_VARIABLE _fc_cc OUTPUT_STRIP_TRAILING_WHITESPACE)
 set(_fc_flags "-arch arm64 -isysroot ${_fc_sysroot} ${_fc_min}")
 ExternalProject_Add(ext_fontconfig
-    URL https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.15.0.tar.gz
-    DOWNLOAD_NAME ext_fontconfig.tar.gz
+    # freedesktop.org is flaky; list a mirror so the download is robust.
+    URL "https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.15.0.tar.xz"
+        "https://fossies.org/linux/misc/fontconfig-2.15.0.tar.xz"
+    DOWNLOAD_NAME ext_fontconfig.tar.xz
     DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/downloads
     DEPENDS ext_freetype ext_expat
     BUILD_IN_SOURCE 1
