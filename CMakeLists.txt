@@ -1062,6 +1062,17 @@ macro(kis_add_library)
     endif()
     add_library(${REAL_ADD_LIBRARY_ARGS})
 
+    if (IOS AND "MODULE" IN_LIST REAL_UNPARSED_ARGUMENTS)
+        # A MODULE is a Krita plugin (KPluginFactory). On iOS it is linked
+        # statically into the krita executable, so it must be built as a Qt
+        # static plugin: QT_STATICPLUGIN makes K_PLUGIN_FACTORY emit the
+        # qt_static_plugin_* hook that Q_IMPORT_PLUGIN registers. Record the
+        # target so krita/CMakeLists.txt can whole-archive link them all.
+        list(GET REAL_UNPARSED_ARGUMENTS 0 _kis_plugin_target)
+        target_compile_definitions(${_kis_plugin_target} PRIVATE QT_STATICPLUGIN)
+        set_property(GLOBAL APPEND PROPERTY KRITA_IOS_PLUGIN_TARGETS ${_kis_plugin_target})
+    endif()
+
     if (KRITA_ENABLE_PCH)
         # the second run strips out all the option supported by the function
         # to let the script to calculate the number of source files in

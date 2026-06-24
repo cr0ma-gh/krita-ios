@@ -171,6 +171,23 @@ if(HAVE_KCRASH)
     target_link_libraries(krita PRIVATE KF${KF_MAJOR}::Crash)
 endif()
 
+if (IOS)
+    # iOS links every plugin statically. Whole-archive each one so the factory
+    # registered by Q_IMPORT_PLUGIN (in KisStaticPluginsInit.cpp above) — and
+    # all code reachable only through Krita's runtime factory registration —
+    # survives the linker's dead-stripping. The plugin targets are collected by
+    # kis_add_library (which also defines QT_STATICPLUGIN on them).
+    get_property(_krita_ios_plugins GLOBAL PROPERTY KRITA_IOS_PLUGIN_TARGETS)
+    if (_krita_ios_plugins)
+        list(REMOVE_DUPLICATES _krita_ios_plugins)
+        foreach(_plugin IN LISTS _krita_ios_plugins)
+            target_link_libraries(krita PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,${_plugin}>")
+        endforeach()
+        list(LENGTH _krita_ios_plugins _krita_ios_plugin_count)
+        message(STATUS "Krita iOS: whole-archive linking ${_krita_ios_plugin_count} static plugins")
+    endif()
+endif()
+
 if (APPLE AND NOT IOS)
     set(KRITA_VERSION_NUMBER_STRING "${KRITA_STABLE_VERSION_MAJOR}.${KRITA_STABLE_VERSION_MINOR}.${KRITA_VERSION_RELEASE}")
     set_target_properties(krita PROPERTIES INSTALL_RPATH "@loader_path/../../../../lib;@loader_path/../lib;
