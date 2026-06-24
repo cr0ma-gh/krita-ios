@@ -219,6 +219,9 @@ krita_ios_ext(ext_kcodecs
 krita_ios_ext(ext_kcompletion
     URL https://github.com/KDE/kcompletion/archive/refs/heads/master.tar.gz
     DEPENDS ext_kconfig ext_kwidgetsaddons ext_kcoreaddons ext_kcodecs)
+krita_ios_ext(ext_kcolorscheme
+    URL https://github.com/KDE/kcolorscheme/archive/refs/heads/master.tar.gz
+    DEPENDS ext_kconfig ext_kguiaddons ext_kcoreaddons ext_ki18n)
 
 # ---------------------------------------------------------------------------
 # TODO (see dependencies.md for the full DAG, build systems and drop list):

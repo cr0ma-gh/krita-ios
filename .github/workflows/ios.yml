@@ -70,7 +70,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.WORK }}/deps-${{ env.PLATFORM }}
-          key: ios-deps-${{ env.PLATFORM }}-${{ hashFiles('packaging/ios/**') }}
+          # Only the dependency definitions invalidate the cache — not the
+          # orchestrator/docs — so Krita-configure/compile iterations stay fast.
+          key: ios-deps-${{ env.PLATFORM }}-${{ hashFiles('packaging/ios/3rdparty-ios/**', 'packaging/ios/host-tools/**', 'cmake/modules/ios.toolchain.cmake') }}
 
       - name: Build Krita (deps + configure + build + package)
         run: |
