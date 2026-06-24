@@ -78,10 +78,11 @@ krita_ios_ext(ext_eigen3
     CMAKE_ARGS -DEIGEN_BUILD_DOC=OFF -DBUILD_TESTING=OFF
 )
 
-# zlib — base of the image-codec chain.
+# zlib — base of the image-codec chain. Use the GitHub release (permanent);
+# zlib.net moves older releases into a fossils/ subdir and 404s the top URL.
 set(ZLIB_VERSION "1.3.1" CACHE STRING "")
 krita_ios_ext(ext_zlib
-    URL https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz
+    URL https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz
 )
 
 # libjpeg-turbo — needs nothing; tiff/heif/etc. depend on it.
