@@ -172,19 +172,23 @@ if(HAVE_KCRASH)
 endif()
 
 if (IOS)
-    # iOS links every plugin statically. Whole-archive each one so the factory
-    # registered by Q_IMPORT_PLUGIN (in KisStaticPluginsInit.cpp above) — and
-    # all code reachable only through Krita's runtime factory registration —
-    # survives the linker's dead-stripping. The plugin targets are collected by
-    # kis_add_library (which also defines QT_STATICPLUGIN on them).
+    # iOS links every plugin statically into the executable. The plugin targets
+    # are collected by kis_add_library (which also defines QT_STATICPLUGIN on
+    # them); Q_IMPORT_PLUGIN in KisStaticPluginsInit.cpp (added to krita_SRCS
+    # above) provides the reference that pulls each plugin's factory and the
+    # code reachable from it.
+    #
+    # NB: link them NORMALLY, not whole-archive. Krita's import/export plugin
+    # pairs (ora, jpeg, psd, heightmap, ...) each compile the shared converter
+    # source into both halves, so force-loading every object would produce
+    # "duplicate symbol" errors. Normal linking lets the linker pull each
+    # shared object only once.
     get_property(_krita_ios_plugins GLOBAL PROPERTY KRITA_IOS_PLUGIN_TARGETS)
     if (_krita_ios_plugins)
         list(REMOVE_DUPLICATES _krita_ios_plugins)
-        foreach(_plugin IN LISTS _krita_ios_plugins)
-            target_link_libraries(krita PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,${_plugin}>")
-        endforeach()
+        target_link_libraries(krita PRIVATE ${_krita_ios_plugins})
         list(LENGTH _krita_ios_plugins _krita_ios_plugin_count)
-        message(STATUS "Krita iOS: whole-archive linking ${_krita_ios_plugin_count} static plugins")
+        message(STATUS "Krita iOS: linking ${_krita_ios_plugin_count} static plugins")
     endif()
 
     # exiv2 (XMP) and fontconfig (XML config) use expat, and KI18n/fontconfig
