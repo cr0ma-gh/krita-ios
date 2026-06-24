@@ -223,6 +223,20 @@ krita_ios_ext(ext_kcolorscheme
     URL https://github.com/KDE/kcolorscheme/archive/refs/heads/master.tar.gz
     DEPENDS ext_kconfig ext_kguiaddons ext_kcoreaddons ext_ki18n)
 
+# --- Other native dependencies (non-KDE) -----------------------------------
+# Boost: Krita's find_package(Boost) needs only the headers; install them
+# directly (no b2 bootstrap). Build compiled Boost libs later if a link needs them.
+set(BOOST_VERSION "1.86.0" CACHE STRING "")
+string(REPLACE "." "_" _boost_us "${BOOST_VERSION}")
+ExternalProject_Add(ext_boost
+    URL https://archives.boost.io/release/${BOOST_VERSION}/source/boost_${_boost_us}.tar.gz
+    DOWNLOAD_NAME ext_boost.tar.gz
+    DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/downloads
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/boost ${EXTPREFIX}/include/boost
+)
+
 # ---------------------------------------------------------------------------
 # TODO (see dependencies.md for the full DAG, build systems and drop list):
 #   image:   ext_tiff ext_giflib ext_webp ext_openjpeg ext_heif ext_jpegxl
