@@ -99,7 +99,14 @@ private:
     static void fixUpNonEmbeddedProcessEnvironment(const QString &processPath, QProcess &process);
 
 private:
+#ifdef Q_OS_IOS
+    // iOS has no subprocess support, so QProcess is an incomplete type here.
+    // QScopedPointer would require a complete type for its deleter, so use a
+    // raw pointer that is never allocated (the wrapper is stubbed on iOS).
+    QProcess *m_process = nullptr;
+#else
     QScopedPointer<QProcess> m_process;
+#endif
     QSharedPointer<QProgressDialog> m_progress = nullptr;
     KisFFMpegWrapperSettings m_processSettings;
     

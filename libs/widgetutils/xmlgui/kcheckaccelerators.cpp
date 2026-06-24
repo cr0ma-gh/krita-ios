@@ -22,7 +22,11 @@
 #include <QComboBox>
 #include <QGroupBox>
 #include <QClipboard>
+#ifndef Q_OS_IOS
+// QProcess is unavailable on iOS (the 'process' feature is off, and its header
+// hard-errors via QT_REQUIRE_CONFIG). All QProcess use below is also guarded.
 #include <QProcess>
+#endif
 #include <QDialogButtonBox>
 #include <QFile>
 

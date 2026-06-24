@@ -529,7 +529,9 @@ endif()
     )
 
 if (ENABLE_UPDATERS)
-	if (UNIX)
+	# The AppImage updater is Linux-only and is built on QProcess, which is
+	# unavailable on iOS (Apple platforms are UNIX in CMake, so exclude iOS).
+	if (UNIX AND NOT IOS)
     	set(kritaui_LIB_SRCS
         	${kritaui_LIB_SRCS}
         	utils/KisAppimageUpdater.cpp
