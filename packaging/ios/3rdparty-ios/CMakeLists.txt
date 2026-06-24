@@ -123,7 +123,7 @@ endfunction()
 
 # Extra CMake Modules — KDE's CMake helpers, required by Krita and every KF
 # framework. Arch-independent (installs .cmake modules only).
-set(ECM_VERSION "6.5.0" CACHE STRING "")
+set(ECM_VERSION "6.10.0" CACHE STRING "")
 krita_ios_ext(ext_ecm
     URL https://github.com/KDE/extra-cmake-modules/archive/refs/tags/v${ECM_VERSION}.tar.gz
     CMAKE_ARGS -DBUILD_TESTING=OFF
@@ -169,7 +169,7 @@ krita_ios_ext_autotools(ext_lcms2
 # --- KDE Frameworks 6 (CMake; need ECM + Qt6 + host Qt tools) --------------
 # Krita requires: Config WidgetsAddons Completion CoreAddons GuiAddons I18n
 # ItemViews. Built in dependency order from the KDE GitHub mirror tags.
-set(KF6_VERSION "6.5.0" CACHE STRING "")
+set(KF6_VERSION "6.10.0" CACHE STRING "")
 
 krita_ios_ext(ext_kcoreaddons
     URL https://github.com/KDE/kcoreaddons/archive/refs/tags/v${KF6_VERSION}.tar.gz
