@@ -72,6 +72,13 @@ if [[ -n "${QT_HOST_PATH:-}" ]]; then
     extra_cmake+=( -DQT_HOST_PATH="${QT_HOST_PATH}" )
     # Host Qt tools (qtpaths/moc/rcc/uic) on PATH for ECM/KDE queries and the build.
     export PATH="${QT_HOST_PATH}/bin:${PATH}"
+    # ECMQueryQt (KDEInstallDirs, included before Krita's find_package(Qt6))
+    # resolves qtpaths only via the Qt6::qtpaths target, which doesn't exist
+    # that early when cross-compiling. Point its QUERY_EXECUTABLE cache var at
+    # the host qtpaths directly.
+    if [[ -x "${QT_HOST_PATH}/bin/qtpaths" ]]; then
+        extra_cmake+=( -DQUERY_EXECUTABLE="${QT_HOST_PATH}/bin/qtpaths" )
+    fi
 fi
 echo "    QT_HOST_PATH=${QT_HOST_PATH:-<unset>}"
 echo "    qtpaths=$(command -v qtpaths 2>/dev/null || echo none) qtpaths6=$(command -v qtpaths6 2>/dev/null || echo none)"
