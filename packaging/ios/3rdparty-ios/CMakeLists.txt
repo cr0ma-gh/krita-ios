@@ -281,9 +281,12 @@ krita_ios_ext(ext_tiff
     CMAKE_ARGS -Dtiff-tools=OFF -Dtiff-tests=OFF -Dtiff-docs=OFF -Dtiff-contrib=OFF
                -Djbig=OFF -Dlzma=OFF -Dzstd=OFF -Dwebp=OFF -Dlerc=OFF)
 
-# Fontconfig + libunibreak — the last REQUIRED deps (autotools).
+# libunibreak + FriBidi (autotools; FriBidi is required by the vendored raqm).
 krita_ios_ext_autotools(ext_libunibreak
     URL https://github.com/adah1972/libunibreak/releases/download/libunibreak_6_1/libunibreak-6.1.tar.gz)
+krita_ios_ext_autotools(ext_fribidi
+    URL https://github.com/fribidi/fribidi/releases/download/v1.0.16/fribidi-1.0.16.tar.xz
+    CONFIGURE_ARGS --disable-docs)
 # Fontconfig needs special care: its host generator fc-lang must build for the
 # HOST (CC_FOR_BUILD), and its tools/tests use system() (absent on iOS) so we
 # restrict SUBDIRS to the library and its generators.
