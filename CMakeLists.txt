@@ -1053,7 +1053,14 @@ macro(kis_add_library)
     # the first run strips only options specific to kis_add_library
     # to create arguments for real add_library call
     cmake_parse_arguments(REAL "" PCH_FILE "" ${ARGV} )
-    add_library(${REAL_UNPARSED_ARGUMENTS})
+    set(REAL_ADD_LIBRARY_ARGS ${REAL_UNPARSED_ARGUMENTS})
+    if (IOS)
+        # iOS is static-only (no dlopen, single signed binary): force every
+        # Krita library to STATIC regardless of an explicit SHARED/MODULE.
+        list(TRANSFORM REAL_ADD_LIBRARY_ARGS REPLACE "^SHARED$" "STATIC")
+        list(TRANSFORM REAL_ADD_LIBRARY_ARGS REPLACE "^MODULE$" "STATIC")
+    endif()
+    add_library(${REAL_ADD_LIBRARY_ARGS})
 
     if (KRITA_ENABLE_PCH)
         # the second run strips out all the option supported by the function
