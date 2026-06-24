@@ -107,6 +107,14 @@ endfunction()
 # MUST be verified (and hashes added) before a real build.
 # ---------------------------------------------------------------------------
 
+# Extra CMake Modules — KDE's CMake helpers, required by Krita and every KF
+# framework. Arch-independent (installs .cmake modules only).
+set(ECM_VERSION "6.5.0" CACHE STRING "")
+krita_ios_ext(ext_ecm
+    URL https://github.com/KDE/extra-cmake-modules/archive/refs/tags/v${ECM_VERSION}.tar.gz
+    CMAKE_ARGS -DBUILD_TESTING=OFF
+)
+
 # Header-only: trivial to cross-compile.
 set(EIGEN3_VERSION "3.4.0" CACHE STRING "")
 krita_ios_ext(ext_eigen3
