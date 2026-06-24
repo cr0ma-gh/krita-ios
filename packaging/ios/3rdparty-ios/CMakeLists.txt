@@ -237,6 +237,41 @@ ExternalProject_Add(ext_boost
     INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/boost ${EXTPREFIX}/include/boost
 )
 
+# Immer / Zug / Lager — header-only C++ (CMake); Krita REQUIRES all three.
+krita_ios_ext(ext_immer
+    URL https://github.com/arximboldi/immer/archive/refs/tags/v0.8.1.tar.gz
+    CMAKE_ARGS -Dimmer_BUILD_TESTS=OFF -Dimmer_BUILD_EXAMPLES=OFF -Dimmer_BUILD_DOCS=OFF -Dimmer_BUILD_EXTRAS=OFF)
+krita_ios_ext(ext_zug
+    URL https://github.com/arximboldi/zug/archive/refs/heads/master.tar.gz
+    CMAKE_ARGS -Dzug_BUILD_TESTS=OFF -Dzug_BUILD_EXAMPLES=OFF)
+krita_ios_ext(ext_lager
+    URL https://github.com/arximboldi/lager/archive/refs/heads/master.tar.gz
+    DEPENDS ext_immer ext_zug
+    CMAKE_ARGS -Dlager_BUILD_TESTS=OFF -Dlager_BUILD_EXAMPLES=OFF -Dlager_BUILD_DOCS=OFF)
+
+# expat — needed by exiv2 (XMP) and fontconfig.
+set(EXPAT_VERSION "2.6.4" CACHE STRING "")
+string(REPLACE "." "_" _expat_us "${EXPAT_VERSION}")
+krita_ios_ext(ext_expat
+    URL https://github.com/libexpat/libexpat/releases/download/R_${_expat_us}/expat-${EXPAT_VERSION}.tar.gz
+    CMAKE_ARGS -DEXPAT_BUILD_TESTS=OFF -DEXPAT_BUILD_EXAMPLES=OFF -DEXPAT_BUILD_TOOLS=OFF -DEXPAT_BUILD_DOCS=OFF -DEXPAT_SHARED_LIBS=OFF)
+
+# FreeType without HarfBuzz (breaks the cycle), then HarfBuzz with FreeType.
+krita_ios_ext(ext_freetype
+    URL https://github.com/freetype/freetype/archive/refs/tags/VER-2-13-3.tar.gz
+    DEPENDS ext_png ext_zlib
+    CMAKE_ARGS -DFT_DISABLE_HARFBUZZ=ON -DFT_DISABLE_BROTLI=ON -DFT_DISABLE_BZIP2=ON)
+krita_ios_ext(ext_harfbuzz
+    URL https://github.com/harfbuzz/harfbuzz/archive/refs/tags/10.2.0.tar.gz
+    DEPENDS ext_freetype
+    CMAKE_ARGS -DHB_HAVE_FREETYPE=ON -DHB_BUILD_TESTS=OFF -DHB_BUILD_UTILS=OFF -DHB_HAVE_GLIB=OFF -DHB_HAVE_ICU=OFF -DHB_HAVE_CORETEXT=ON)
+
+# Exiv2 — Krita REQUIRES LibExiv2.
+krita_ios_ext(ext_exiv2
+    URL https://github.com/Exiv2/exiv2/archive/refs/tags/v0.28.5.tar.gz
+    DEPENDS ext_expat ext_zlib
+    CMAKE_ARGS -DEXIV2_BUILD_SAMPLES=OFF -DEXIV2_BUILD_EXIV2_COMMAND=OFF -DEXIV2_ENABLE_BMFF=OFF -DEXIV2_BUILD_UNIT_TESTS=OFF -DEXIV2_ENABLE_INIH=OFF)
+
 # ---------------------------------------------------------------------------
 # TODO (see dependencies.md for the full DAG, build systems and drop list):
 #   image:   ext_tiff ext_giflib ext_webp ext_openjpeg ext_heif ext_jpegxl
