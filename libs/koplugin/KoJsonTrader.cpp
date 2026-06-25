@@ -11,6 +11,7 @@
 
 #include <QCoreApplication>
 #include <QPluginLoader>
+#include <QtPlugin>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QDirIterator>
@@ -27,11 +28,17 @@ struct KoJsonTrader::PluginCacheEntry
     QJsonArray serviceTypes;
     QStringList mimeTypes;
     QSharedPointer<QPluginLoader> loader;
+#ifdef Q_OS_IOS
+    // iOS: statically-linked plugins have no loader/file.
+    QObject *staticInstance = nullptr;
+    QJsonObject staticMetaData;
+#endif
 };
 
 
 KoJsonTrader::KoJsonTrader()
 {
+#ifndef Q_OS_IOS
     // Allow a command line variable KRITA_PLUGIN_PATH to override the automatic search
     m_pluginPath = QProcessEnvironment::systemEnvironment().value("KRITA_PLUGIN_PATH");
 
@@ -116,6 +123,7 @@ KoJsonTrader::KoJsonTrader()
         }
         dbgPlugins << "KoJsonTrader will load its plugins from" << m_pluginPath;
     }
+#endif /* Q_OS_IOS */
 
     initializePluginLoaderCache();
 }
@@ -138,6 +146,32 @@ void KoJsonTrader::initializePluginLoaderCache()
 
     KIS_SAFE_ASSERT_RECOVER_RETURN(m_pluginLoaderCache.isEmpty());
 
+#ifdef Q_OS_IOS
+    // iOS links plugins statically; discover them through the Qt static plugin
+    // registry (populated by Q_IMPORT_PLUGIN in KisStaticPluginsInit.cpp)
+    // instead of scanning the filesystem for shared objects.
+    Q_FOREACH (const QStaticPlugin &staticPlugin, QPluginLoader::staticPlugins()) {
+        const QJsonObject json = staticPlugin.metaData().value("MetaData").toObject();
+        if (json.isEmpty()) {
+            continue;
+        }
+        const QJsonArray serviceTypes = json.value("X-KDE-ServiceTypes").toArray();
+        if (serviceTypes.isEmpty()) {
+            continue;
+        }
+
+        QStringList mimeTypes = json.value("X-KDE-ExtraNativeMimeTypes").toString().split(',');
+        mimeTypes += json.value("MimeType").toString().split(';');
+        mimeTypes += json.value("X-KDE-NativeMimeType").toString();
+
+        PluginCacheEntry cacheEntry;
+        cacheEntry.serviceTypes = serviceTypes;
+        cacheEntry.mimeTypes = mimeTypes;
+        cacheEntry.staticInstance = staticPlugin.instance();
+        cacheEntry.staticMetaData = staticPlugin.metaData();
+        m_pluginLoaderCache << cacheEntry;
+    }
+#else
     QList<QPluginLoader *>list;
     QDirIterator dirIter(m_pluginPath, QDirIterator::Subdirectories);
     while (dirIter.hasNext()) {
@@ -180,6 +214,7 @@ void KoJsonTrader::initializePluginLoaderCache()
             }
         }
     }
+#endif /* Q_OS_IOS */
 }
 
 QList<KoJsonTrader::Plugin> KoJsonTrader::query(const QString &servicetype, const QString &mimetype)
@@ -196,7 +231,11 @@ QList<KoJsonTrader::Plugin> KoJsonTrader::query(const QString &servicetype, cons
             continue;
         }
 
+#ifdef Q_OS_IOS
+        list << Plugin(plugin.staticInstance, plugin.staticMetaData, &m_mutex);
+#else
         list << Plugin(plugin.loader, &m_mutex);
+#endif
     }
 
     return list;
@@ -208,6 +247,15 @@ KoJsonTrader::Plugin::Plugin(QSharedPointer<QPluginLoader> loader, QMutex *mutex
 {
 }
 
+#ifdef Q_OS_IOS
+KoJsonTrader::Plugin::Plugin(QObject *staticInstance, const QJsonObject &metaData, QMutex *mutex)
+    : m_staticInstance(staticInstance),
+      m_staticMetaData(metaData),
+      m_mutex(mutex)
+{
+}
+#endif
+
 KoJsonTrader::Plugin::~Plugin()
 {
 }
@@ -215,20 +263,40 @@ KoJsonTrader::Plugin::~Plugin()
 QObject *KoJsonTrader::Plugin::instance() const
 {
     QMutexLocker l(m_mutex);
+#ifdef Q_OS_IOS
+    if (!m_loader) {
+        return m_staticInstance;
+    }
+#endif
     return m_loader->instance();
 }
 
 QJsonObject KoJsonTrader::Plugin::metaData() const
 {
+#ifdef Q_OS_IOS
+    if (!m_loader) {
+        return m_staticMetaData;
+    }
+#endif
     return m_loader->metaData();
 }
 
 QString KoJsonTrader::Plugin::fileName() const
 {
+#ifdef Q_OS_IOS
+    if (!m_loader) {
+        return QStringLiteral("<static plugin>");
+    }
+#endif
     return m_loader->fileName();
 }
 
 QString KoJsonTrader::Plugin::errorString() const
 {
+#ifdef Q_OS_IOS
+    if (!m_loader) {
+        return QString();
+    }
+#endif
     return m_loader->errorString();
 }

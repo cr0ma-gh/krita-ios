@@ -12,6 +12,7 @@
 #include <QString>
 #include <QMutex>
 #include <QSharedPointer>
+#include <QJsonObject>
 #include <kis_pointer_utils.h>
 #include "kritaplugin_export.h"
 
@@ -34,6 +35,11 @@ public:
     struct KRITAPLUGIN_EXPORT Plugin {
         Plugin() = default;
         Plugin(QSharedPointer<QPluginLoader> loader, QMutex *mutex);
+#ifdef Q_OS_IOS
+        // iOS plugins are linked statically; there is no QPluginLoader, just
+        // the already-instantiated QObject and the embedded plugin metadata.
+        Plugin(QObject *staticInstance, const QJsonObject &metaData, QMutex *mutex);
+#endif
         ~Plugin();
 
         QObject *instance() const;
@@ -44,6 +50,10 @@ public:
 
     private:
         QSharedPointer<QPluginLoader> m_loader;
+#ifdef Q_OS_IOS
+        QObject *m_staticInstance = nullptr;
+        QJsonObject m_staticMetaData;
+#endif
         QMutex *m_mutex = 0;
     };
 
