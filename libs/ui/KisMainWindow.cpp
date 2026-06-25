@@ -1994,18 +1994,28 @@ void KisMainWindow::slotStoragesWarning(const QString &/*location*/)
 
     if (!checkPaintOpAvailable()) {
         warning += i18n("\nThere are no brush presets available. Please enable a bundle that has presets before continuing.\n");
+#ifdef Q_OS_IOS
+        // Modal dialogs (QDialog::exec / QMessageBox) run a nested event loop,
+        // which aborts the process during the iOS launch sequence; and the
+        // bundle manager opens a file dialog that is unsupported here. Just
+        // log — the default bundles shipped inside the .app are imported on
+        // first run, so a clean install should not reach this path at all.
+        qWarning() << "KisMainWindow::slotStoragesWarning:" << warning;
+#else
         QMessageBox::critical(this, i18nc("@title:window", "Krita"), warning);
 
         QAction *action = actionCollection()->action("manage_bundles");
         if (action) {
             action->trigger();
         }
+#endif
     }
 
+#ifndef Q_OS_IOS
     if (!checkActiveBundlesAvailable()) {
         QMessageBox::warning(this, i18nc("@title:window", "Krita"), warning + i18n("\nOnly your local resources are available."));
     }
-
+#endif
 }
 
 bool KisMainWindow::restoreWorkspace(KoResourceSP res)
