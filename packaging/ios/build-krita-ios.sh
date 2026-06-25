@@ -125,6 +125,17 @@ set -e
 # CMake's RUNTIME_OUTPUT_DIRECTORY puts the executable bundle under bin/.
 APP="${BUILD_DIR}/bin/krita.app"
 if [[ -d "${APP}" ]]; then
+    # Bundle Krita's default resources into the .app. KisApplication looks for
+    # them under getApplicationRoot()/share/krita (= .app/share/krita on iOS),
+    # copies them to the writable app-data dir on first run, and imports them.
+    # Without the default bundle there are no brush presets, so Krita force-
+    # opens the bundle manager -> a file dialog -> a nested-event-loop assert
+    # that crashes on iOS. See README.ios.md.
+    echo "==> Bundling default resources into krita.app"
+    mkdir -p "${APP}/share/krita/bundles"
+    cp "${SRC_ROOT}"/krita/data/bundles/*.bundle "${APP}/share/krita/bundles/" 2>/dev/null || true
+    ls -la "${APP}/share/krita/bundles/" || true
+
     echo "==> Packaging unsigned .ipa"
     rm -rf "${WORK}/Payload"
     mkdir -p "${WORK}/Payload"

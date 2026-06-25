@@ -147,6 +147,12 @@ QString getInstallationPrefix() {
     // any files other than libraries
     // NOTE the subscript [1]. It points to the internal location.
     return QStandardPaths::standardLocations(QStandardPaths::AppDataLocation)[1] + "/";
+#elif defined(Q_OS_IOS)
+    // On iOS the .app bundle is flat: the binary sits directly at the bundle
+    // root and the build copies default resources under .app/share/. So the
+    // installation prefix IS the application directory (NOT its parent, which
+    // would point outside the read-only bundle into the sandbox container).
+    return qApp->applicationDirPath() + "/";
 #else
     return qApp->applicationDirPath() + "/../";
 #endif
