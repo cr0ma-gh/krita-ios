@@ -214,6 +214,17 @@ Java_org_krita_android_JNIWrappers_openFileFromIntent(JNIEnv* /*env*/,
 #define MAIN_FN main
 #endif
 
+#ifdef Q_OS_IOS
+// Must live at C++ file scope, NOT inside the extern "C" main below: there the
+// Q_INIT_RESOURCE declarations would get C language linkage and reference
+// non-existent C symbols, while rcc generates C++-mangled qInitResources_*.
+static void kritaIosInitStaticResources()
+{
+    Q_INIT_RESOURCE(sql);
+    Q_INIT_RESOURCE(kxmlgui);
+}
+#endif
+
 extern "C" MAIN_EXPORT int MAIN_FN(int argc, char **argv)
 {
 #ifdef Q_OS_ANDROID
@@ -658,13 +669,13 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
     // static libraries are not auto-registered — the linker drops their
     // initializer objects because nothing references them, and the data is
     // only ever looked up by ":/..." path. Register the resources needed at
-    // startup explicitly: the resource-cache SQL schema (libs/resources/
-    // sql.qrc, without which "Could not find SQL file :/create_version_
-    // information.sql" aborts launch) and the xmlGUI standard UI definitions
-    // (libs/widgetutils/xmlgui/kxmlgui.qrc). Resources compiled straight into
-    // the krita executable (flake, kritawidgets, icons, ...) self-register.
-    Q_INIT_RESOURCE(sql);
-    Q_INIT_RESOURCE(kxmlgui);
+    // startup explicitly (via a C++-linkage helper, see above): the resource-
+    // cache SQL schema (libs/resources/sql.qrc, without which "Could not find
+    // SQL file :/create_version_information.sql" aborts launch) and the xmlGUI
+    // standard UI definitions (libs/widgetutils/xmlgui/kxmlgui.qrc). Resources
+    // compiled straight into the krita executable (flake, kritawidgets,
+    // icons, ...) self-register.
+    kritaIosInitStaticResources();
 #endif
 
     // first create the application so we can create a pixmap
