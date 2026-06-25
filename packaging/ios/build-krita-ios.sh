@@ -134,7 +134,14 @@ if [[ -d "${APP}" ]]; then
     echo "==> Bundling default resources into krita.app"
     mkdir -p "${APP}/share/krita/bundles"
     cp "${SRC_ROOT}"/krita/data/bundles/*.bundle "${APP}/share/krita/bundles/" 2>/dev/null || true
-    ls -la "${APP}/share/krita/bundles/" || true
+    # Input profiles (tablet/Pencil + key shortcuts). These are loaded as loose
+    # files via KoResourcePaths, NOT from the resource bundle; without them the
+    # current input profile is null and the first Pencil event segfaults in the
+    # shortcut matcher (KisInputProfile::allShortcuts on null). So drawing is
+    # impossible until these ship in the app.
+    mkdir -p "${APP}/share/krita/input"
+    cp "${SRC_ROOT}"/krita/data/input/*.profile "${APP}/share/krita/input/" 2>/dev/null || true
+    ls -la "${APP}/share/krita/input/" || true
 
     echo "==> Packaging unsigned .ipa"
     rm -rf "${WORK}/Payload"

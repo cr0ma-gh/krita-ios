@@ -386,6 +386,11 @@ void KisInputProfileManager::saveProfile(KisInputProfile *profile, QString stora
 QList<KisShortcutConfiguration *> KisInputProfileManager::getConflictingShortcuts(KisInputProfile *profile)
 {
     QSet<KisShortcutConfiguration *> conflictedShortcuts;
+    if (!profile) {
+        // Can be null if no input profiles were loaded (e.g. the .profile
+        // files were not installed). Avoid dereferencing it.
+        return conflictedShortcuts.values();
+    }
     const QList<KisShortcutConfiguration *> shortcuts = profile->allShortcuts();
     for (auto startIt = shortcuts.constBegin(); startIt != shortcuts.constEnd(); ++startIt) {
         KisShortcutConfiguration *first = *startIt;
