@@ -143,8 +143,16 @@ void KisOpenGL::initialize()
     KisOpenGL::RendererConfig config;
     config.format = QSurfaceFormat::defaultFormat();
 
+#ifdef Q_OS_IOS
+    // The hidden-window probe cannot make a GLES context current on iOS and
+    // always reports no OpenGL, which would force Krita onto the software
+    // canvas that doesn't paint brush strokes. The real canvas is an on-screen
+    // QOpenGLWidget that does get a valid GLES context, so assume GLES here.
+    openGLCheckResult = KisOpenGLModeProber::Result(config.format);
+#else
     openGLCheckResult =
         KisOpenGLModeProber::instance()->probeFormat(config, false);
+#endif
 
 #ifdef Q_OS_WIN
 

@@ -49,6 +49,11 @@ public:
 class KisOpenGLModeProber::Result {
 public:
     Result(QOpenGLContext &context);
+    // Build a synthetic "OpenGL ES 3.0 is available" result without a live
+    // context. Used on iOS, where probing a hidden QWindow always fails to
+    // make a context current, but the real on-screen QOpenGLWidget canvas
+    // does get a valid GLES context.
+    explicit Result(const QSurfaceFormat &syntheticGLESFormat);
 
     int glMajorVersion() const {
         return m_glMajorVersion;

@@ -355,6 +355,27 @@ QString KisOpenGLModeProber::angleRendererToString(KisOpenGL::AngleRenderer rend
     return value;
 }
 
+KisOpenGLModeProber::Result::Result(const QSurfaceFormat &syntheticGLESFormat)
+    : m_glMajorVersion(3)
+    , m_glMinorVersion(0)
+    , m_supportsDeprecatedFunctions(false)
+    , m_isOpenGLES(true)
+    , m_supportsFBO(true)
+    , m_supportsBufferMapping(true)
+    , m_supportsBufferInvalidation(false)
+    , m_supportsLod(true)
+    , m_rendererString(QStringLiteral("Apple OpenGL ES (assumed)"))
+    , m_driverVersionString(QStringLiteral("OpenGL ES 3.0"))
+    , m_vendorString(QStringLiteral("Apple"))
+    , m_shadingLanguageString(QStringLiteral("OpenGL ES GLSL ES 3.00"))
+    , m_format(syntheticGLESFormat)
+{
+    m_format.setRenderableType(QSurfaceFormat::OpenGLES);
+    if (m_format.majorVersion() < 3) {
+        m_format.setVersion(3, 0);
+    }
+}
+
 KisOpenGLModeProber::Result::Result(QOpenGLContext &context) {
     if (!context.isValid()) {
         return;
