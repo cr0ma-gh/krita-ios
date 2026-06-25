@@ -88,7 +88,14 @@ echo "    QT_HOST_PATH=${QT_HOST_PATH:-<unset>}"
 echo "    qtpaths=$(command -v qtpaths 2>/dev/null || echo none) qtpaths6=$(command -v qtpaths6 2>/dev/null || echo none)"
 [[ -n "${QT_HOST_PATH:-}" ]] && echo "    host bin: $(ls "${QT_HOST_PATH}/bin" 2>/dev/null | tr '\n' ' ')"
 set +e
+# zlib's CMake ignores BUILD_SHARED_LIBS and always builds libz.*.dylib, which
+# FindZLIB then prefers over libz.a — that bakes an @rpath/libz.1.dylib load
+# command the device can't satisfy, so the app aborts at launch (dyld "Library
+# not loaded"). Drop the dylibs so the static libz.a is linked, and clear any
+# cached ZLIB_LIBRARY so a restored build dir re-detects it.
+rm -f "${DEPS_PREFIX}"/lib/libz*.dylib "${DEPS_PREFIX}"/lib/libz*.so* 2>/dev/null || true
 cmake -S "${SRC_ROOT}" -B "${BUILD_DIR}" -G Ninja \
+    -UZLIB_LIBRARY -UZLIB_LIBRARY_RELEASE -UZLIB_LIBRARY_DEBUG \
     -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
     -DPLATFORM="${PLATFORM}" \
     -DDEPLOYMENT_TARGET="${DEPLOYMENT_TARGET}" \
