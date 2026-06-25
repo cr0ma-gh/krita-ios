@@ -449,8 +449,25 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
         const KisConfig::CanvasSurfaceBitDepthMode bitDepthMode =
             KisConfig::canvasSurfaceBitDepthMode(&kritarc);
 
+#ifdef Q_OS_IOS
+        // The desktop GL auto-detection (selectSurfaceConfig) probes by
+        // spinning up throwaway QGuiApplication + QWindow + GL contexts before
+        // the real application exists, which is unreliable on iOS and ends up
+        // reporting that OpenGL is unavailable. Krita then falls back to the
+        // software canvas, which does not paint brush strokes. iOS only ever
+        // provides OpenGL ES, so configure it directly and skip the probe; the
+        // later KisOpenGL::initialize() validates it with the real app running.
+        Q_UNUSED(preferredRenderer);
+        Q_UNUSED(rootSurfaceFormat);
+        Q_UNUSED(bitDepthMode);
+        KisOpenGL::RendererConfig config;
+        config.format.setRenderableType(QSurfaceFormat::OpenGLES);
+        config.format.setVersion(3, 0);
+        config.angleRenderer = KisOpenGL::AngleRendererDefault;
+#else
         const KisOpenGL::RendererConfig config =
             KisOpenGL::selectSurfaceConfig(preferredRenderer, rootSurfaceFormat, bitDepthMode, enableOpenGLDebug);
+#endif
 
         KisOpenGL::setDefaultSurfaceConfig(config);
         KisOpenGL::setDebugSynchronous(openGLDebugSynchronous);

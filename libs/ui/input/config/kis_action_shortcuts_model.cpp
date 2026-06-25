@@ -324,7 +324,10 @@ KisInputProfile *KisActionShortcutsModel::profile() const
 void KisActionShortcutsModel::setProfile(KisInputProfile *profile)
 {
     if (profile != d->profile) {
-        if (d->profile) {
+        // Guard the empty case: beginInsert/RemoveRows(0, count-1) with count==0
+        // means (0, -1), which Qt asserts on (first > last). An action can have
+        // no shortcuts in a given profile.
+        if (d->profile && !d->shortcuts.isEmpty()) {
             beginRemoveRows(QModelIndex(), 0, d->shortcuts.count() - 1);
             endRemoveRows();
         }
@@ -333,8 +336,10 @@ void KisActionShortcutsModel::setProfile(KisInputProfile *profile)
 
         if (d->action && d->profile) {
             d->shortcuts = d->profile->shortcutsForAction(d->action);
-            beginInsertRows(QModelIndex(), 0, d->shortcuts.count() - 1);
-            endInsertRows();
+            if (!d->shortcuts.isEmpty()) {
+                beginInsertRows(QModelIndex(), 0, d->shortcuts.count() - 1);
+                endInsertRows();
+            }
         }
     }
 }
