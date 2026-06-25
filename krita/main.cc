@@ -653,6 +653,20 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
     }
 #endif
 
+#ifdef Q_OS_IOS
+    // Everything is linked statically on iOS, so Qt resources that live in
+    // static libraries are not auto-registered — the linker drops their
+    // initializer objects because nothing references them, and the data is
+    // only ever looked up by ":/..." path. Register the resources needed at
+    // startup explicitly: the resource-cache SQL schema (libs/resources/
+    // sql.qrc, without which "Could not find SQL file :/create_version_
+    // information.sql" aborts launch) and the xmlGUI standard UI definitions
+    // (libs/widgetutils/xmlgui/kxmlgui.qrc). Resources compiled straight into
+    // the krita executable (flake, kritawidgets, icons, ...) self-register.
+    Q_INIT_RESOURCE(sql);
+    Q_INIT_RESOURCE(kxmlgui);
+#endif
+
     // first create the application so we can create a pixmap
     KisApplication app(key, argc, argv);
 
