@@ -527,6 +527,18 @@ bool KisApplication::start(const KisApplicationArguments &args)
 #endif
 #endif
 
+#ifdef Q_OS_IOS
+    // Never latch a persisted OPENGL_FAILED on iOS. Nothing ever writes
+    // OPENGL_SUCCESS (the canvas writes OPENGL_STARTED, which is not an
+    // accepted state), so once FAILED is on disk the else-branch below
+    // re-latches it at every startup, and kis_canvas2 then falls back to the
+    // QPainter canvas even when the GL canvas just initialized fine. On iOS
+    // that fallback is a black, non-painting canvas — the very first build
+    // (broken GL probe) wrote FAILED once and every later run stayed black.
+    // Reset each launch; a genuine failure in THIS run is still recorded by
+    // reportFailedShaderCompilation() during canvas creation.
+    cfg.setCanvasState("TRY_OPENGL");
+#else
     QString opengl = cfg.canvasState();
     if (opengl == "OPENGL_NOT_TRIED" ) {
         cfg.setCanvasState("TRY_OPENGL");
@@ -534,6 +546,7 @@ bool KisApplication::start(const KisApplicationArguments &args)
     else if (opengl != "OPENGL_SUCCESS" && opengl != "TRY_OPENGL") {
         cfg.setCanvasState("OPENGL_FAILED");
     }
+#endif
 
     setSplashScreenLoadingText(i18n("Initializing Globals..."));
     processEvents();
