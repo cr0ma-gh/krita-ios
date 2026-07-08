@@ -1,3 +1,10 @@
+if (APPLE AND IOS)
+    # Evita duplicazione su build iOS statica
+    set(KRITA_JPEG_IMPORT_ONLY ON)
+    # oppure
+    # remove_definitions(-Dkrita_jpeg_export_EXPORTS)
+endif()
+
 add_subdirectory(tests)
 
 set(ICCJPEG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/lcms")
