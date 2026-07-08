@@ -153,7 +153,10 @@ void KoFileDialog::createFileDialog()
     KConfigGroup group = KSharedConfig::openConfig()->group("File Dialogs");
 
     bool dontUseNative = true;
-#ifdef Q_OS_ANDROID
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    // iOS, like Android, is sandboxed and must use the platform's native document
+    // picker (UIDocumentPickerViewController) so the user can reach the Files app
+    // and iCloud Drive rather than only the app's private sandbox.
     dontUseNative = false;
 #endif
 #ifdef Q_OS_UNIX
@@ -305,10 +308,10 @@ QString KoFileDialog::filename()
             break;
         }
 
-        // The Android native file selector does not know to add the .kra
-        // extension (MIME type not registered), so just skip the whole file
-        // suffix check for Android.
-#ifndef Q_OS_ANDROID
+        // The Android and iOS native file selectors do not know to add the .kra
+        // extension (MIME type not registered), and the sandboxed URL they return
+        // cannot be modified, so skip the whole file suffix check on both.
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
         const QString suffix = QFileInfo(url).suffix();
         bool isValidSuffix = true;
         if (KisMimeDatabase::mimeTypeForSuffix(suffix).isEmpty()) {
@@ -589,9 +592,10 @@ void KoFileDialog::onFilterSelected(const QString &filter)
 {
     debugWidgetUtils << "KoFileDialog::onFilterSelected" << filter;
 
-    // Setting default suffix for Android is broken as of Qt 5.12.0, returning the file
-    // with extension added but no write permissions granted.
-#ifndef Q_OS_ANDROID
+    // Setting the default suffix is broken for sandboxed native pickers (Android
+    // as of Qt 5.12.0, and iOS): it returns the file with the extension added but
+    // no write permission granted for that modified name.
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
     QFileDialog::FileMode mode = d->fileDialog->fileMode();
     if (mode != QFileDialog::Directory && !d->fileDialog->testOption(QFileDialog::ShowDirsOnly)) {
         // we do not need suffixes for directories
