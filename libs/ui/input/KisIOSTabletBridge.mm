@@ -119,8 +119,12 @@ KisIOSPencilTapAction mapPreferredAction(UIPencilPreferredAction action)
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     [self emitTouches:touches event:event phase:KisIOSPenSample::Begin];
-    // Stay in Possible/Failed so we never cancel the touches for Qt.
-    self.state = UIGestureRecognizerStateFailed;
+    // Deliberately stay in UIGestureRecognizerStatePossible. Transitioning to
+    // .failed/.ended here makes UIKit stop delivering touchesMoved/touchesEnded
+    // for this sequence, so only the initial press is emitted — a single dot
+    // instead of a stroke. Staying .possible keeps every sample flowing; Qt
+    // still receives all touches unmodified because cancelsTouchesInView is NO
+    // and delaysTouches* are NO (set in install()).
 }
 
 - (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
