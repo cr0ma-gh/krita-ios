@@ -39,6 +39,44 @@ const QPointingDevice *iosStylusDevice()
     return &device;
 }
 
+// --- native-vs-synthesised stroke deduplication -----------------------------
+// Qt's iOS platform plugin (quiview.mm) delivers Apple Pencil contact strokes
+// natively as QTabletEvents — coalesced samples, precise sub-pixel positions,
+// pressure/tilt — when QT_CONFIG(tabletevent) is enabled in the Qt build. If
+// both that native stream and our bridge synthesis run, every stroke arrives
+// twice (double press/move/release) and the shortcut matcher breaks strokes.
+//
+// We cannot know at build time whether the deployed Qt delivers the native
+// stream, so detect it at runtime: the first native tablet event (a stylus
+// event whose device is not ours) permanently hands stroke duplication off to
+// Qt, and our synthesis stops emitting contact strokes. If no native event
+// ever arrives, our synthesis keeps driving drawing. Hover and the double-tap
+// are always ours — Qt's iOS plugin implements neither.
+
+bool g_nativeTabletSeen = false;   // a Qt-native stylus event was observed
+bool g_synthStrokeActive = false;  // a synthesised stroke is mid-flight
+
+class NativeTabletDetector : public QObject
+{
+public:
+    using QObject::QObject;
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        Q_UNUSED(watched);
+        if (!g_nativeTabletSeen
+            && (event->type() == QEvent::TabletPress || event->type() == QEvent::TabletMove)) {
+            const QTabletEvent *te = static_cast<QTabletEvent *>(event);
+            if (te->pointingDevice() != iosStylusDevice()
+                && te->deviceType() == QInputDevice::DeviceType::Stylus) {
+                g_nativeTabletSeen = true;
+            }
+        }
+        return false; // observe only, never consume
+    }
+};
+
 QEvent::Type phaseToType(KisIOSPenSample::Phase phase)
 {
     switch (phase) {
@@ -128,6 +166,8 @@ void KisIOSTabletInput::install(QWidget *canvas)
     if (!tapWired) {
         tapWired = true;
         KisIOSTabletBridge::setPencilTapSink(&handlePencilTap);
+        // Watch for Qt-native stylus events so synthesis can hand off to them.
+        qApp->installEventFilter(new NativeTabletDetector(qApp));
     }
 
     QPointer<QWidget> target(canvas);
@@ -145,13 +185,34 @@ void KisIOSTabletInput::install(QWidget *canvas)
             return;
         }
 
+        // Contact strokes: synthesise only while Qt's native tablet stream is
+        // absent (see NativeTabletDetector). Strokes are gated at Begin so a
+        // stroke started by synthesis is always completed by synthesis, even if
+        // the first native event lands mid-stroke.
+        if (s.phase == KisIOSPenSample::Begin) {
+            if (g_nativeTabletSeen) {
+                return;
+            }
+            g_synthStrokeActive = true;
+        } else if (s.phase != KisIOSPenSample::Hover) {
+            if (!g_synthStrokeActive) {
+                return;
+            }
+            if (s.phase == KisIOSPenSample::End || s.phase == KisIOSPenSample::Cancel) {
+                g_synthStrokeActive = false;
+            }
+        }
+
         // Bridge samples are in the window's native-view coordinates (points,
         // which already match Qt's logical coordinates). Map them into the
-        // canvas widget's local space before delivering the event.
+        // canvas widget's local space, preserving the sub-pixel fraction —
+        // integer-rounded positions turn slow diagonal strokes into staircases.
         QWidget *window = target->window();
-        const QPoint windowPos(qRound(s.x), qRound(s.y));
-        const QPointF local = target->mapFrom(window, windowPos);
-        const QPointF global = window->mapToGlobal(windowPos);
+        const QPointF windowPosF(s.x, s.y);
+        const QPoint windowPosI(qRound(s.x), qRound(s.y));
+        const QPointF fraction = windowPosF - QPointF(windowPosI);
+        const QPointF local = QPointF(target->mapFrom(window, windowPosI)) + fraction;
+        const QPointF global = QPointF(window->mapToGlobal(windowPosI)) + fraction;
 
         // "Down" (a button held) means the pen is in contact and painting.
         // Hover moves the cursor with the pen in proximity but no button, so
