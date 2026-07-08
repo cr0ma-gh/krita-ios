@@ -16,6 +16,7 @@
 #include <KisUsageLogger.h>
 
 #import <UIKit/UIKit.h>
+#import <objc/runtime.h>
 
 namespace
 {
@@ -30,6 +31,57 @@ KisIOSTabletBridge::TapSink g_tapSink;
 // owned by the view). Lets install() avoid stacking duplicates and remove()
 // detach exactly ours without touching any recognizer Qt may have added.
 QHash<void *, void *> g_hoverGRs;
+} // namespace
+
+// Tells system Scribble to keep its hands off Pencil strokes on the canvas
+// view: without this, iPadOS may capture pencil input for handwriting and
+// cancel the app's touch sequence mid-stroke.
+API_AVAILABLE(ios(14.0))
+@interface KisScribbleBlocker : NSObject <UIScribbleInteractionDelegate>
+@end
+
+@implementation KisScribbleBlocker
+- (BOOL)scribbleInteraction:(UIScribbleInteraction *)interaction
+       shouldBeginAtLocation:(CGPoint)location
+{
+    Q_UNUSED(interaction);
+    Q_UNUSED(location);
+    return NO;
+}
+@end
+
+static KisScribbleBlocker *g_scribbleBlocker = nil;
+
+namespace
+{
+// iPadOS screen-edge system gestures (home indicator, multitasking) claim a
+// touch sequence retroactively and CANCEL it for the app — a stroke or a palm
+// starting near an edge dies mid-way. Qt's root view controller does not
+// override preferredScreenEdgesDeferringSystemGestures, so patch it at runtime
+// to defer all edges (the system then requires a second, deliberate swipe).
+void hardenRootViewController(UIView *view)
+{
+    static bool done = false;
+    if (done) {
+        return;
+    }
+    UIViewController *vc = view.window.rootViewController;
+    if (!vc) {
+        return; // window not up yet; retried on the next touch
+    }
+    done = true;
+
+    Class cls = object_getClass(vc);
+    SEL sel = @selector(preferredScreenEdgesDeferringSystemGestures);
+    Method proto = class_getInstanceMethod([UIViewController class], sel);
+    IMP imp = imp_implementationWithBlock(^UIRectEdge(id vcSelf) {
+        Q_UNUSED(vcSelf);
+        return UIRectEdgeAll;
+    });
+    class_replaceMethod(cls, sel, imp, method_getTypeEncoding(proto));
+    [vc setNeedsUpdateOfScreenEdgesDeferringSystemGestures];
+    KisUsageLogger::log("Pencil bridge: system screen-edge gestures deferred (root VC hardened)");
+}
 
 KisIOSPenSample makeSample(UITouch *touch, UIView *view, KisIOSPenSample::Phase phase)
 {
@@ -137,6 +189,9 @@ KisIOSPencilTapAction mapPreferredAction(UIPencilPreferredAction action)
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
+    // Lazily (the window is guaranteed live here) defer system edge gestures.
+    hardenRootViewController(self.targetView);
+
     [self emitTouches:touches event:event phase:KisIOSPenSample::Begin];
 
     // Claim the gesture for the Pencil. NEVER use .failed here: the palm
@@ -181,12 +236,21 @@ KisIOSPencilTapAction mapPreferredAction(UIPencilPreferredAction action)
 {
     [self emitTouches:touches event:event phase:KisIOSPenSample::Cancel];
 
-    // If this still fires mid-stroke, something outran our claim — the next
-    // device log will say so.
-    static bool cancelLogged = false;
-    if (!cancelLogged) {
-        cancelLogged = true;
-        KisUsageLogger::log("Pencil bridge: touch sequence CANCELLED by UIKit");
+    // Diagnostic: state tells us WHO cancelled. state=Began/Changed (2/3) =
+    // we had claimed and a SYSTEM gate overrode us; state=Possible (0) = an
+    // app-level recognizer won the arena before our claim.
+    static int cancelLogs = 0;
+    if (cancelLogs < 5) {
+        ++cancelLogs;
+        bool hadPencil = false;
+        for (UITouch *touch in touches) {
+            if (touch.type == UITouchTypePencil) {
+                hadPencil = true;
+                break;
+            }
+        }
+        KisUsageLogger::log(QString("Pencil bridge: touch sequence CANCELLED by UIKit (state=%1 pencil=%2 touches=%3)")
+                                .arg(int(self.state)).arg(hadPencil).arg(int(touches.count)));
     }
 
     if (self.activePencil && [touches containsObject:self.activePencil]) {
@@ -340,6 +404,18 @@ bool KisIOSTabletBridge::install(QWidget *canvas, Sink sink)
         UIPencilInteraction *pencil = [[UIPencilInteraction alloc] init];
         pencil.delegate = g_pencilDelegate;
         [view addInteraction:pencil];
+    }
+
+    // Opt the canvas out of system Scribble, which otherwise may capture
+    // Pencil strokes for handwriting and cancel the app's touch sequence.
+    if (@available(iOS 14.0, *)) {
+        if (!g_scribbleBlocker) {
+            g_scribbleBlocker = [[KisScribbleBlocker alloc] init];
+        }
+        UIScribbleInteraction *scribble =
+            [[UIScribbleInteraction alloc] initWithDelegate:g_scribbleBlocker];
+        [view addInteraction:scribble];
+        KisUsageLogger::log("Pencil bridge: Scribble opted out on canvas view");
     }
 
     // Apple Pencil hover (iPad Pro M2+): track the pen in proximity so the brush
