@@ -86,10 +86,17 @@ KisIOSPencilTapAction mapPreferredAction(UIPencilPreferredAction action)
 }
 } // namespace
 
-// A gesture recognizer that observes touches without consuming them, so Qt
-// still receives the original events.
+// Captures the stroke stream. For finger-only sequences it stays in .possible
+// and never interferes (Qt receives them for pan/zoom gestures). When a Pencil
+// touch begins it CLAIMS the gesture (-> Began/Changed): winning the gesture
+// arena forces every competing recognizer on the view (e.g. Qt's long-press
+// recognizers) to fail, so none of them can recognise mid-stroke and cancel
+// the touch sequence — which showed up on device as strokes that "closed by
+// themselves". cancelsTouchesInView stays NO, so claiming still does not steal
+// the raw touches from Qt (its native stylus stream is suppressed separately).
 @interface KisPencilGestureRecognizer : UIGestureRecognizer
 @property (nonatomic, assign) UIView *targetView;
+@property (nonatomic, assign) UITouch *activePencil;
 @end
 
 @implementation KisPencilGestureRecognizer
@@ -131,27 +138,70 @@ KisIOSPencilTapAction mapPreferredAction(UIPencilPreferredAction action)
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     [self emitTouches:touches event:event phase:KisIOSPenSample::Begin];
-    // Deliberately stay in UIGestureRecognizerStatePossible. Transitioning to
-    // .failed/.ended here makes UIKit stop delivering touchesMoved/touchesEnded
-    // for this sequence, so only the initial press is emitted — a single dot
-    // instead of a stroke. Staying .possible keeps every sample flowing; Qt
-    // still receives all touches unmodified because cancelsTouchesInView is NO
-    // and delaysTouches* are NO (set in install()).
+
+    // Claim the gesture for the Pencil. NEVER use .failed here: the palm
+    // usually rests on the glass BEFORE the pen lands, and a recognizer that
+    // failed on the palm sits out the whole touch sequence — losing the
+    // stroke. Finger-only sequences simply stay in .possible.
+    if (!self.activePencil) {
+        for (UITouch *touch in touches) {
+            if (touch.type == UITouchTypePencil) {
+                self.activePencil = touch;
+                if (self.state == UIGestureRecognizerStatePossible) {
+                    self.state = UIGestureRecognizerStateBegan;
+                }
+                break;
+            }
+        }
+    }
 }
 
 - (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     [self emitTouches:touches event:event phase:KisIOSPenSample::Move];
+    if (self.state == UIGestureRecognizerStateBegan
+        || self.state == UIGestureRecognizerStateChanged) {
+        self.state = UIGestureRecognizerStateChanged;
+    }
 }
 
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     [self emitTouches:touches event:event phase:KisIOSPenSample::End];
+    if (self.activePencil && [touches containsObject:self.activePencil]) {
+        self.activePencil = nil;
+        if (self.state == UIGestureRecognizerStateBegan
+            || self.state == UIGestureRecognizerStateChanged) {
+            self.state = UIGestureRecognizerStateEnded;
+        }
+    }
 }
 
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     [self emitTouches:touches event:event phase:KisIOSPenSample::Cancel];
+
+    // If this still fires mid-stroke, something outran our claim — the next
+    // device log will say so.
+    static bool cancelLogged = false;
+    if (!cancelLogged) {
+        cancelLogged = true;
+        KisUsageLogger::log("Pencil bridge: touch sequence CANCELLED by UIKit");
+    }
+
+    if (self.activePencil && [touches containsObject:self.activePencil]) {
+        self.activePencil = nil;
+    }
+    if (self.state == UIGestureRecognizerStateBegan
+        || self.state == UIGestureRecognizerStateChanged) {
+        self.state = UIGestureRecognizerStateCancelled;
+    }
+}
+
+- (void)reset
+{
+    self.activePencil = nil;
+    [super reset];
 }
 
 @end
