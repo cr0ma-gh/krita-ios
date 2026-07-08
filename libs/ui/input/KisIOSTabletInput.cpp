@@ -19,6 +19,7 @@
 #include <KisPart.h>
 #include <KisMainWindow.h>
 #include <KisView.h>
+#include <KisUsageLogger.h>
 #include <kactioncollection.h>
 #include <kis_canvas2.h>
 #include <kis_popup_palette.h>
@@ -72,6 +73,7 @@ protected:
             if (te->pointingDevice() != iosStylusDevice()
                 && te->deviceType() == QInputDevice::DeviceType::Stylus) {
                 g_nativeTabletSeen = true;
+                KisUsageLogger::log("Pencil: Qt-native stylus events detected -> synthesis handed off to Qt");
             }
         }
         return false; // observe only, never consume
@@ -189,6 +191,7 @@ protected:
             if (!m_canvas) {
                 deleteLater();
             } else if (tryInstallBridge(m_canvas)) {
+                KisUsageLogger::log("Pencil bridge: attached on retry (window realised)");
                 m_canvas->setProperty("kisIOSBridgeRetryPending", QVariant());
                 deleteLater();
             }
@@ -220,8 +223,11 @@ void KisIOSTabletInput::install(QWidget *canvas)
         qApp->installEventFilter(new NativeTabletDetector(qApp));
     }
 
-    if (!tryInstallBridge(canvas)) {
+    if (tryInstallBridge(canvas)) {
+        KisUsageLogger::log("Pencil bridge: attached immediately at addCanvas");
+    } else {
         // Window not realised yet — retry on first show (once per canvas).
+        KisUsageLogger::log("Pencil bridge: window not realised at addCanvas -> deferred retry armed");
         if (!canvas->property("kisIOSBridgeRetryPending").toBool()) {
             canvas->setProperty("kisIOSBridgeRetryPending", true);
             new DeferredBridgeInstaller(canvas);
@@ -276,6 +282,13 @@ bool tryInstallBridge(QWidget *canvas)
         const QPointF fraction = windowPosF - QPointF(windowPosI);
         const QPointF local = QPointF(target->mapFrom(window, windowPosI)) + fraction;
         const QPointF global = QPointF(window->mapToGlobal(windowPosI)) + fraction;
+
+        // One-shot trace so the device log proves synthesized events flow.
+        static bool firstSynthLogged = false;
+        if (!firstSynthLogged && s.phase == KisIOSPenSample::Begin) {
+            firstSynthLogged = true;
+            KisUsageLogger::log(QString("Pencil: first synthesized tablet event (pressure %1)").arg(s.pressure));
+        }
 
         // "Down" (a button held) means the pen is in contact and painting.
         // Hover moves the cursor with the pen in proximity but no button, so

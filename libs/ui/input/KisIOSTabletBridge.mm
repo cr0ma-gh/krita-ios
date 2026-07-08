@@ -13,6 +13,8 @@
 #include <QWidget>
 #include <QWindow>
 
+#include <KisUsageLogger.h>
+
 #import <UIKit/UIKit.h>
 
 namespace
@@ -96,6 +98,16 @@ KisIOSPencilTapAction mapPreferredAction(UIPencilPreferredAction action)
               event:(UIEvent *)event
               phase:(KisIOSPenSample::Phase)phase
 {
+    // One-shot trace: proves UIKit delivers touches to our recognizer at all,
+    // and whether the Pencil is recognised as UITouchTypePencil.
+    static bool firstTouchLogged = false;
+    if (!firstTouchLogged && phase == KisIOSPenSample::Begin) {
+        firstTouchLogged = true;
+        UITouch *any = touches.anyObject;
+        KisUsageLogger::log(QString("Pencil bridge: first UITouch received (type=%1)")
+                                .arg(any.type == UITouchTypePencil ? "pencil" : "finger/other"));
+    }
+
     auto it = g_sinks.find((__bridge void *)self.targetView);
     if (it == g_sinks.end()) {
         return;
@@ -154,6 +166,7 @@ KisIOSPencilTapAction mapPreferredAction(UIPencilPreferredAction action)
 - (void)pencilInteractionDidTap:(UIPencilInteraction *)interaction
 {
     Q_UNUSED(interaction);
+    KisUsageLogger::log("Pencil: double-tap received from UIPencilInteraction");
     if (!g_tapSink) {
         return;
     }
@@ -181,6 +194,12 @@ API_AVAILABLE(ios(16.1))
     auto it = g_sinks.find((__bridge void *)self.targetView);
     if (it == g_sinks.end()) {
         return;
+    }
+
+    static bool firstHoverLogged = false;
+    if (!firstHoverLogged) {
+        firstHoverLogged = true;
+        KisUsageLogger::log("Pencil: first hover event from UIHoverGestureRecognizer");
     }
 
     KisIOSPenSample s;
@@ -250,6 +269,9 @@ bool KisIOSTabletBridge::install(QWidget *canvas, Sink sink)
     if (alreadyAttached) {
         return true;
     }
+
+    KisUsageLogger::log(QString("Pencil bridge: attaching recognizers to UIView %1")
+                            .arg((quintptr)view, 0, 16));
 
     KisPencilGestureRecognizer *gr = [[KisPencilGestureRecognizer alloc] init];
     gr.targetView = view;

@@ -143,6 +143,22 @@ if [[ -d "${APP}" ]]; then
     cp "${SRC_ROOT}"/krita/data/input/*.profile "${APP}/share/krita/input/" 2>/dev/null || true
     ls -la "${APP}/share/krita/input/" || true
 
+    # ICC color profiles (device-log verified fix for the BLACK CANVAS).
+    # KisMultiSurfaceStateManager needs a display profile; iOS provides none,
+    # and its fallback p709SRGBProfile() is profileByName("sRGB-elle-V2-
+    # srgbtrc.icc") — loaded from these files via KoResourcePaths
+    # ("icc_profiles" -> share/color/icc, searched recursively). Without them
+    # BOTH profiles are null: the display color conversion is dead, the canvas
+    # renders black, and new images fall back to the wrong default profile
+    # (ROMM RGB) because sRGB is missing. Mirror the desktop install layout.
+    mkdir -p "${APP}/share/color/icc/krita"
+    cp "${SRC_ROOT}"/krita/data/profiles/*.icc  "${APP}/share/color/icc/krita/" 2>/dev/null || true
+    cp "${SRC_ROOT}"/krita/data/profiles/*.ICC  "${APP}/share/color/icc/krita/" 2>/dev/null || true
+    cp "${SRC_ROOT}"/krita/data/profiles/*.icm  "${APP}/share/color/icc/krita/" 2>/dev/null || true
+    cp "${SRC_ROOT}"/krita/data/profiles/elles-icc-profiles/*.icc "${APP}/share/color/icc/krita/" 2>/dev/null || true
+    cp "${SRC_ROOT}"/krita/data/profiles/ycbcr-icc-profiles/*.icc "${APP}/share/color/icc/krita/" 2>/dev/null || true
+    echo "    ICC profiles bundled: $(ls "${APP}/share/color/icc/krita/" | wc -l)"
+
     echo "==> Packaging unsigned .ipa"
     rm -rf "${WORK}/Payload"
     mkdir -p "${WORK}/Payload"
