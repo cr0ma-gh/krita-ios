@@ -1069,10 +1069,17 @@ bool KisConfig::useOpenGL(bool defaultValue) const
         return true;
     }
 
+#ifdef Q_OS_IOS
+    // iOS has no usable software canvas — the QPainter fallback does not paint
+    // brush strokes — so the GLES canvas must always be used. This also ignores
+    // any "none" persisted by the crash-prevention path (see KisPart::createView).
+    return true;
+#else
     const QString configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
     QSettings kritarc(configPath + QStringLiteral("/kritadisplayrc"), QSettings::IniFormat);
 
     return kritarc.value("OpenGLRenderer", "auto").toString() != "none";
+#endif
 }
 
 void KisConfig::disableOpenGL() const

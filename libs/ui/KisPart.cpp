@@ -281,12 +281,17 @@ KisView *KisPart::createView(KisDocument *document,
     // If creating the canvas fails, record this and disable OpenGL next time
     KisConfig cfg(false);
     KConfigGroup grp( KSharedConfig::openConfig(), "crashprevention");
+#ifndef Q_OS_IOS
+    // iOS has no usable non-GL canvas, so the crash-prevention heuristic must
+    // never disable OpenGL there: a suspend/kill mid-canvas-creation (routine on
+    // iPad) would otherwise strand the user on the non-painting software canvas.
     if (grp.readEntry("CreatingCanvas", false)) {
         cfg.disableOpenGL();
     }
     if (cfg.canvasState() == "OPENGL_FAILED") {
         cfg.disableOpenGL();
     }
+#endif
     grp.writeEntry("CreatingCanvas", true);
     grp.sync();
 
