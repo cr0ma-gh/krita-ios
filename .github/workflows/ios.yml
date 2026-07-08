@@ -1,15 +1,4 @@
-# Krita for iOS / iPadOS — Phase 0 build (GitHub Actions).
-#
-# Free macOS runners for PUBLIC repositories. The build logic lives in
-# packaging/ios/build-krita-ios.sh so the same build runs locally or on any
-# other runner (see packaging/ios/ci.md). This YAML is just the GitHub glue.
-#
-# Honest status: the dependency superbuild is partial and Qt is stock, so the
-# build is not expected to produce a finished krita.app yet — the orchestrator
-# reports how far it got and exits cleanly. Any .ipa is uploaded as an artifact.
-#
-# Triggers on push to main/ios branches, or manually (workflow_dispatch).
-
+# Krita for iOS / iPadOS — Phase 0 build (GitHub Actions)
 name: iOS build
 
 on:
@@ -29,7 +18,7 @@ permissions:
 jobs:
   build:
     name: Krita iOS (${{ github.event.inputs.platform || 'OS64' }})
-    runs-on: macos-14            # Apple silicon; free for public repos
+    runs-on: macos-14
     env:
       PLATFORM: ${{ github.event.inputs.platform || 'OS64' }}
       DEPLOYMENT_TARGET: "16.0"
@@ -45,14 +34,14 @@ jobs:
       - name: Install host tools
         run: brew install ninja cmake
 
-      # Qt6 cross-compilation needs BOTH a host (desktop-macOS) Qt for
-      # moc/rcc/uic and the iOS target Qt. Install both; remember their paths.
+      # === Qt Installation ===
       - name: Install host Qt (macOS)
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
           host: mac
           target: desktop
+
       - run: echo "QT_HOST_PATH=$QT_ROOT_DIR" >> "$GITHUB_ENV"
 
       - name: Install Qt for iOS
@@ -62,20 +51,16 @@ jobs:
           host: mac
           target: ios
           modules: qtshadertools qtimageformats qt5compat
+
       - run: echo "QT_IOS_ROOT=$QT_ROOT_DIR" >> "$GITHUB_ENV"
 
-      # Cross-compiled dependency prefix; the orchestrator auto-skips the
-      # dependency build when this is already populated.
+      # === Caching ===
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
           path: ${{ env.WORK }}/deps-${{ env.PLATFORM }}
-          # Only the dependency definitions invalidate the cache — not the
-          # orchestrator/docs — so Krita-configure/compile iterations stay fast.
           key: ios-deps-${{ env.PLATFORM }}-${{ hashFiles('packaging/ios/3rdparty-ios/**', 'packaging/ios/host-tools/**', 'cmake/modules/ios.toolchain.cmake') }}
 
-      # Krita build dir, kept across runs so ninja recompiles incrementally
-      # during the compile phase (only the files a fix touched).
       - name: Cache Krita build dir
         uses: actions/cache@v4
         with:
@@ -83,20 +68,73 @@ jobs:
           key: ios-kbuild-${{ env.PLATFORM }}-${{ github.run_id }}
           restore-keys: ios-kbuild-${{ env.PLATFORM }}-
 
+      # === Code Signing Setup ===
+      - name: Import Code Signing Certificates
+        if: github.event.inputs.platform != 'SIMULATORARM64'  # no signing for simulator
+        env:
+          CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+        run: |
+          if [ -n "$CERTIFICATE_P12" ]; then
+            echo "$CERTIFICATE_P12" | base64 --decode > cert.p12
+            security create-keychain -p "" build.keychain
+            security default-keychain -s build.keychain
+            security unlock-keychain -p "" build.keychain
+            security import cert.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+            security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+            rm cert.p12
+          fi
+
+      - name: Install Provisioning Profile
+        if: github.event.inputs.platform != 'SIMULATORARM64'
+        env:
+          PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: |
+          if [ -n "$PROVISIONING_PROFILE" ]; then
+            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+            echo "$PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+          fi
+
+      # === Build Krita ===
       - name: Build Krita (deps + configure + build + package)
+        env:
+          SIGNING_IDENTITY: ${{ secrets.IOS_SIGNING_IDENTITY || 'Apple Development' }}
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          PROVISIONING_PROFILE_UUID: ${{ secrets.IOS_PROVISIONING_PROFILE_UUID }}
         run: |
           mkdir -p "$WORK"
-          # Tee the orchestrator output to a log so it can be inspected as an
-          # artifact (readable anonymously, unlike the auth-gated job logs).
-          bash packaging/ios/build-krita-ios.sh 2>&1 | tee "$WORK/build.log"
-        continue-on-error: true   # expected until the deps DAG + patched Qt land
+          bash packaging/ios/build-krita-ios.sh \
+            --platform "$PLATFORM" \
+            --signing-identity "$SIGNING_IDENTITY" \
+            --team-id "$TEAM_ID" \
+            --provisioning-profile-uuid "$PROVISIONING_PROFILE_UUID" \
+            2>&1 | tee "$WORK/build.log"
+        continue-on-error: true
 
-      - name: Upload artifact
+      # === Export Signed IPA (fallback/forced signing) ===
+      - name: Export Signed IPA
+        if: always() && github.event.inputs.platform != 'SIMULATORARM64'
+        working-directory: ${{ env.WORK }}
+        env:
+          SIGNING_IDENTITY: ${{ secrets.IOS_SIGNING_IDENTITY }}
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+        run: |
+          if [ -d "build-${PLATFORM}/Krita.xcarchive" ]; then
+            echo "Exporting signed IPA..."
+            xcodebuild -exportArchive \
+              -archivePath "build-${PLATFORM}/Krita.xcarchive" \
+              -exportOptionsPlist packaging/ios/exportOptions.plist \
+              -exportPath . \
+              -allowProvisioningUpdates
+          fi
+
+      - name: Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: krita-ios-${{ env.PLATFORM }}
           path: |
             ${{ env.WORK }}/build.log
-            ${{ env.WORK }}/krita-unsigned-*.ipa
+            ${{ env.WORK }}/*.ipa
+            ${{ env.WORK }}/build-${{ env.PLATFORM }}/Krita.xcarchive
           if-no-files-found: warn
