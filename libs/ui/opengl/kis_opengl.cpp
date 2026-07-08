@@ -180,6 +180,17 @@ void KisOpenGL::initialize()
     }
 #endif
 
+#ifdef Q_OS_IOS
+    // iOS's OpenGL ES runs on top of Metal, and like ANGLE-over-DirectX its
+    // texture-buffer (PBO) upload path does extra staging copies of every tile,
+    // which makes painting — especially with large brushes — very laggy. Use
+    // direct, unbuffered glTexSubImage2D uploads instead (set silently: this is
+    // expected on iOS, not an error to warn the user about).
+    if (!qEnvironmentVariableIsSet("KRITA_UNLOCK_TEXTURE_BUFFERS")) {
+        g_forceDisableTextureBuffers = true;
+    }
+#endif
+
 
     g_debugText.clear();
     QDebug debugOut(&g_debugText);
