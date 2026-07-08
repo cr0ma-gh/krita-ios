@@ -41,24 +41,20 @@ const QPointingDevice *iosStylusDevice()
     return &device;
 }
 
-// --- native-vs-synthesised stroke deduplication -----------------------------
-// Qt's iOS platform plugin (quiview.mm) delivers Apple Pencil contact strokes
-// natively as QTabletEvents — coalesced samples, precise sub-pixel positions,
-// pressure/tilt — when QT_CONFIG(tabletevent) is enabled in the Qt build. If
-// both that native stream and our bridge synthesis run, every stroke arrives
-// twice (double press/move/release) and the shortcut matcher breaks strokes.
+// --- native stylus stream suppression ---------------------------------------
+// Qt's iOS platform plugin (quiview.mm) also delivers Apple Pencil contact
+// strokes as QTabletEvents. Running both that stream and our bridge synthesis
+// duplicates every stroke; and the earlier "hand strokes off to Qt" approach
+// produced dots on device: the device log showed the handoff firing, after
+// which UIKit gesture interference turned the native stream into
+// press+cancel — one dab per stroke, with our synthesis permanently silent.
 //
-// We cannot know at build time whether the deployed Qt delivers the native
-// stream, so detect it at runtime: the first native tablet event (a stylus
-// event whose device is not ours) permanently hands stroke duplication off to
-// Qt, and our synthesis stops emitting contact strokes. If no native event
-// ever arrives, our synthesis keeps driving drawing. Hover and the double-tap
-// are always ours — Qt's iOS plugin implements neither.
+// So the bridge synthesis is the single authoritative stroke source (it is
+// also where palm rejection, hover and the double-tap live), and Qt's native
+// stylus events are CONSUMED here so they never reach Krita. If the native
+// stream doesn't exist in a given Qt build, this filter simply never matches.
 
-bool g_nativeTabletSeen = false;   // a Qt-native stylus event was observed
-bool g_synthStrokeActive = false;  // a synthesised stroke is mid-flight
-
-class NativeTabletDetector : public QObject
+class NativeStylusSuppressor : public QObject
 {
 public:
     using QObject::QObject;
@@ -67,16 +63,28 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override
     {
         Q_UNUSED(watched);
-        if (!g_nativeTabletSeen
-            && (event->type() == QEvent::TabletPress || event->type() == QEvent::TabletMove)) {
+        switch (event->type()) {
+        case QEvent::TabletPress:
+        case QEvent::TabletMove:
+        case QEvent::TabletRelease:
+        case QEvent::TabletEnterProximity:
+        case QEvent::TabletLeaveProximity: {
             const QTabletEvent *te = static_cast<QTabletEvent *>(event);
             if (te->pointingDevice() != iosStylusDevice()
                 && te->deviceType() == QInputDevice::DeviceType::Stylus) {
-                g_nativeTabletSeen = true;
-                KisUsageLogger::log("Pencil: Qt-native stylus events detected -> synthesis handed off to Qt");
+                static bool logged = false;
+                if (!logged) {
+                    logged = true;
+                    KisUsageLogger::log("Pencil: suppressing Qt-native stylus events (bridge owns the stroke stream)");
+                }
+                return true; // consume: the bridge synthesis is the only source
             }
+            break;
         }
-        return false; // observe only, never consume
+        default:
+            break;
+        }
+        return false;
     }
 };
 
@@ -219,8 +227,8 @@ void KisIOSTabletInput::install(QWidget *canvas)
     if (!tapWired) {
         tapWired = true;
         KisIOSTabletBridge::setPencilTapSink(&handlePencilTap);
-        // Watch for Qt-native stylus events so synthesis can hand off to them.
-        qApp->installEventFilter(new NativeTabletDetector(qApp));
+        // Eat Qt's native stylus stream: the bridge synthesis owns strokes.
+        qApp->installEventFilter(new NativeStylusSuppressor(qApp));
     }
 
     if (tryInstallBridge(canvas)) {
@@ -252,24 +260,6 @@ bool tryInstallBridge(QWidget *canvas)
         // standard iPad model — the Pencil paints, fingers gesture.
         if (!s.isPencil) {
             return;
-        }
-
-        // Contact strokes: synthesise only while Qt's native tablet stream is
-        // absent (see NativeTabletDetector). Strokes are gated at Begin so a
-        // stroke started by synthesis is always completed by synthesis, even if
-        // the first native event lands mid-stroke.
-        if (s.phase == KisIOSPenSample::Begin) {
-            if (g_nativeTabletSeen) {
-                return;
-            }
-            g_synthStrokeActive = true;
-        } else if (s.phase != KisIOSPenSample::Hover) {
-            if (!g_synthStrokeActive) {
-                return;
-            }
-            if (s.phase == KisIOSPenSample::End || s.phase == KisIOSPenSample::Cancel) {
-                g_synthStrokeActive = false;
-            }
         }
 
         // Bridge samples are in the window's native-view coordinates (points,

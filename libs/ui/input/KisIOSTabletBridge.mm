@@ -307,6 +307,14 @@ bool KisIOSTabletBridge::install(QWidget *canvas, Sink sink)
             UIHoverGestureRecognizer *hover =
                 [[UIHoverGestureRecognizer alloc] initWithTarget:handler
                                                           action:@selector(hover:)];
+            // CRITICAL: a recognizer in Began/Changed cancels the view's
+            // touches by default — and the hover recognizer IS in that state
+            // whenever the Pencil hovers, i.e. right before every contact. With
+            // the default, each stroke's touches were cancelled for the QUIView
+            // (Qt saw press+cancel -> a dot). Observe only, never interfere.
+            hover.cancelsTouchesInView = NO;
+            hover.delaysTouchesBegan = NO;
+            hover.delaysTouchesEnded = NO;
             [view addGestureRecognizer:hover];
             g_hoverGRs.insert((__bridge void *)view, (__bridge void *)hover);
         }
