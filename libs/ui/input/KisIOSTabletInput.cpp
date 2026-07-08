@@ -13,6 +13,7 @@
 #include <QPoint>
 #include <QPointer>
 #include <QTabletEvent>
+#include <QVariant>
 #include <QWidget>
 
 #include <KisPart.h>
@@ -154,6 +155,55 @@ void handlePencilTap(KisIOSPencilTapAction action)
 }
 } // namespace
 
+namespace
+{
+bool tryInstallBridge(QWidget *canvas);
+
+// At addCanvas() time the canvas window's native UIView often does not exist
+// yet, so the bridge install no-ops (documented in kis_input_manager_p.cpp) —
+// on device that left the WHOLE Pencil pipeline dead: no pressure, no palm
+// rejection, no double-tap, no hover; drawing fell back to synthesized mouse
+// events. Park this filter on the canvas and its window, and retry the install
+// as soon as the window is realised (first Show/WinIdChange/Paint).
+class DeferredBridgeInstaller : public QObject
+{
+public:
+    explicit DeferredBridgeInstaller(QWidget *canvas)
+        : QObject(canvas)
+        , m_canvas(canvas)
+    {
+        canvas->installEventFilter(this);
+        if (QWidget *w = canvas->window()) {
+            w->installEventFilter(this);
+        }
+    }
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        Q_UNUSED(watched);
+        switch (event->type()) {
+        case QEvent::Show:
+        case QEvent::WinIdChange:
+        case QEvent::Paint:
+            if (!m_canvas) {
+                deleteLater();
+            } else if (tryInstallBridge(m_canvas)) {
+                m_canvas->setProperty("kisIOSBridgeRetryPending", QVariant());
+                deleteLater();
+            }
+            break;
+        default:
+            break;
+        }
+        return false; // observe only
+    }
+
+private:
+    QPointer<QWidget> m_canvas;
+};
+} // namespace
+
 void KisIOSTabletInput::install(QWidget *canvas)
 {
     if (!canvas) {
@@ -170,9 +220,22 @@ void KisIOSTabletInput::install(QWidget *canvas)
         qApp->installEventFilter(new NativeTabletDetector(qApp));
     }
 
+    if (!tryInstallBridge(canvas)) {
+        // Window not realised yet — retry on first show (once per canvas).
+        if (!canvas->property("kisIOSBridgeRetryPending").toBool()) {
+            canvas->setProperty("kisIOSBridgeRetryPending", true);
+            new DeferredBridgeInstaller(canvas);
+        }
+    }
+}
+
+namespace
+{
+bool tryInstallBridge(QWidget *canvas)
+{
     QPointer<QWidget> target(canvas);
 
-    KisIOSTabletBridge::install(canvas, [target](const KisIOSPenSample &s) {
+    return KisIOSTabletBridge::install(canvas, [target](const KisIOSPenSample &s) {
         if (!target) {
             return;
         }
@@ -241,3 +304,4 @@ void KisIOSTabletInput::install(QWidget *canvas)
         QApplication::sendEvent(target, &ev);
     });
 }
+} // namespace

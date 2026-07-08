@@ -20,6 +20,7 @@
 #include "kis_canvas_resource_provider.h"
 #include "kis_config.h"
 #include "kis_debug.h"
+#include <KisUsageLogger.h>
 
 #include <QPainter>
 #include <QPainterPath>
@@ -331,10 +332,15 @@ void KisOpenGLCanvasRenderer::reportFailedShaderCompilation(const QString &conte
     KisConfig cfg(false);
 
     qDebug() << "Shader Compilation Failure: " << context;
+    // Land the failure in krita.log too: on a sideloaded device build this is
+    // the only place the root cause of a black/software canvas can be read.
+    KisUsageLogger::log(QString("OpenGL shader compilation FAILED: %1").arg(context));
+#ifndef Q_OS_IOS
     // TODO: Should do something else when using QtQuick2
     QMessageBox::critical(qApp->activeWindow(), i18nc("@title:window", "Krita"),
                           i18n("Krita could not initialize the OpenGL canvas:\n\n%1\n\n Krita will disable OpenGL and close now.", context),
                           QMessageBox::Close);
+#endif
 
     cfg.disableOpenGL();
     cfg.setCanvasState("OPENGL_FAILED");

@@ -60,11 +60,19 @@ struct KisUsageLogger::Private {
 KisUsageLogger::KisUsageLogger()
     : d(new Private)
 {
-    if (!QFileInfo(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)).exists()) {
-        QDir().mkpath(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation));
+#ifdef Q_OS_IOS
+    // Documents is the only sandbox directory the Files app exposes
+    // (UIFileSharingEnabled in Info.plist), so write the logs there: it is the
+    // practical way to retrieve diagnostics from a sideloaded device build.
+    const QString logDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+#else
+    const QString logDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+#endif
+    if (!QFileInfo(logDir).exists()) {
+        QDir().mkpath(logDir);
     }
-    d->logFile.setFileName(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/krita.log");
-    d->sysInfoFile.setFileName(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/krita-sysinfo.log");
+    d->logFile.setFileName(logDir + "/krita.log");
+    d->sysInfoFile.setFileName(logDir + "/krita-sysinfo.log");
 
     QFileInfo fi(d->logFile.fileName());
     if (fi.size() > 100 * 1000 * 1000) { // 100 mb seems a reasonable max

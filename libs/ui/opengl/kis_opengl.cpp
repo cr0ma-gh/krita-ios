@@ -149,6 +149,11 @@ void KisOpenGL::initialize()
     // canvas that doesn't paint brush strokes. The real canvas is an on-screen
     // QOpenGLWidget that does get a valid GLES context, so assume GLES here.
     openGLCheckResult = KisOpenGLModeProber::Result(config.format);
+    // main.cc skips selectSurfaceConfig() on iOS, which is the only other
+    // writer of g_supportedRenderers — left at 0, the preferences dialog
+    // concludes no renderer exists and shows Canvas Graphics Acceleration as
+    // off and greyed out even while the GLES canvas is running.
+    overrideSupportedRenderers(RendererOpenGLES, RendererOpenGLES);
 #else
     openGLCheckResult =
         KisOpenGLModeProber::instance()->probeFormat(config, false);

@@ -235,14 +235,21 @@ UIView *nativeViewFor(QWidget *canvas)
 }
 } // namespace
 
-void KisIOSTabletBridge::install(QWidget *canvas, Sink sink)
+bool KisIOSTabletBridge::install(QWidget *canvas, Sink sink)
 {
     UIView *view = nativeViewFor(canvas);
     if (!view) {
-        return;
+        // Not realised yet (no window / no winId): the caller retries on show.
+        return false;
     }
 
+    // Always refresh the sink; only attach recognizers/interactions once per
+    // view, so a retry or canvas switch never stacks duplicates.
+    const bool alreadyAttached = g_sinks.contains((__bridge void *)view);
     g_sinks.insert((__bridge void *)view, std::move(sink));
+    if (alreadyAttached) {
+        return true;
+    }
 
     KisPencilGestureRecognizer *gr = [[KisPencilGestureRecognizer alloc] init];
     gr.targetView = view;
@@ -282,6 +289,8 @@ void KisIOSTabletBridge::install(QWidget *canvas, Sink sink)
             g_hoverGRs.insert((__bridge void *)view, (__bridge void *)hover);
         }
     }
+
+    return true;
 }
 
 void KisIOSTabletBridge::remove(QWidget *canvas)

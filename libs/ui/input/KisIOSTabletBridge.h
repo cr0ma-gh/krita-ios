@@ -65,8 +65,11 @@ namespace KisIOSTabletBridge
 {
 using Sink = std::function<void(const KisIOSPenSample &)>;
 
-/// Attach pencil capture to @p canvas. Call after the widget is shown/mapped.
-KRITAUI_EXPORT void install(QWidget *canvas, Sink sink);
+/// Attach pencil capture to @p canvas. Requires the widget's top-level native
+/// UIView to exist (the widget must be realised/shown): returns false when it
+/// does not yet, so the caller can retry once the window is up. Idempotent per
+/// view — repeated calls update the sink without stacking recognizers.
+KRITAUI_EXPORT bool install(QWidget *canvas, Sink sink);
 
 /// Detach pencil capture from @p canvas.
 KRITAUI_EXPORT void remove(QWidget *canvas);

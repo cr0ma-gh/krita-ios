@@ -48,6 +48,7 @@
 #include "KisViewManager.h"
 #include "kis_config.h"
 #include "kis_config_notifier.h"
+#include <KisUsageLogger.h>
 #include "kis_abstract_canvas_widget.h"
 #include "kis_qpainter_canvas.h"
 #include "kis_group_layer.h"
@@ -781,6 +782,7 @@ void KisCanvas2::createCanvas(bool useOpenGL)
 
     if (useOpenGL && !KisOpenGL::hasOpenGL()) {
         warnKrita << "Tried to create OpenGL widget when system doesn't have OpenGL\n";
+        KisUsageLogger::log("Canvas: OpenGL requested but KisOpenGL::hasOpenGL() is false -> QPainter canvas");
         useOpenGL = false;
     }
 
@@ -789,9 +791,13 @@ void KisCanvas2::createCanvas(bool useOpenGL)
         if (cfg.canvasState() == "OPENGL_FAILED") {
             // Creating the opengl canvas failed, fall back
             warnKrita << "OpenGL Canvas initialization returned OPENGL_FAILED. Falling back to QPainter.";
+            KisUsageLogger::log("Canvas: OpenGL canvas creation FAILED (state OPENGL_FAILED) -> falling back to QPainter canvas");
             createQPainterCanvas();
+        } else {
+            KisUsageLogger::log("Canvas: using the OpenGL (GLES) canvas");
         }
     } else {
+        KisUsageLogger::log("Canvas: using the QPainter (software) canvas");
         createQPainterCanvas();
     }
 
