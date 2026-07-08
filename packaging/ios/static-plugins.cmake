@@ -192,7 +192,10 @@ set(KRITA_IOS_ALL_PLUGIN_FACTORIES
     SVGImportFactory                    # SVG open
     SelectionToolsFactory               # rectangular/elliptical/... selection tools
     ShearImageFactory                   # Image > Shear
-    SmallColorSelectorPluginFactory     # Small Color Selector docker
+    # NB: SmallColorSelectorPluginFactory is deliberately NOT listed —
+    # plugins/dockers/CMakeLists.txt gates smallcolorselector behind
+    # HAVE_OPENEXR, which is off on iOS, so the plugin is not built and
+    # Q_IMPORT_PLUGIN of it would fail to link (undefined symbol).
     SpecificColorSelectorPluginFactory  # Specific Color Selector docker
     TIFFImportFactory                   # TIFF open
     ToolCropFactory                     # Crop tool
