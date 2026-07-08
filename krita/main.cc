@@ -463,6 +463,15 @@ if (!qEnvironmentVariableIsEmpty("KRITA_OPENGL_DEBUG")) {
         KisOpenGL::RendererConfig config;
         config.format.setRenderableType(QSurfaceFormat::OpenGLES);
         config.format.setVersion(3, 0);
+        // The direct iOS path above skips generateSurfaceConfig(), so it must
+        // replicate the depth/stencil/double-buffer settings the canvas needs.
+        // Without a stencil+depth buffer and double buffering the canvas
+        // QOpenGLWidget renders to an ill-configured framebuffer and shows
+        // nothing — a black canvas.
+        config.format.setDepthBufferSize(24);
+        config.format.setStencilBufferSize(8);
+        config.format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+        config.format.setSwapInterval(0); // no forced vsync, as on desktop
         config.angleRenderer = KisOpenGL::AngleRendererDefault;
 #else
         const KisOpenGL::RendererConfig config =
