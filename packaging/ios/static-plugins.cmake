@@ -170,6 +170,36 @@ set(KRITA_IOS_ALL_PLUGIN_FACTORIES
     WGColorSelectorPluginFactory
     WaveletDecomposeFactory
     XCFImportFactory
+    # --- 2026-07-08: real factories that were MISSING from the snapshot, so
+    # their tools / dockers / menu entries / file formats never registered on
+    # iOS. All are already built and whole-archive linked (verified in the CI
+    # build log); they only lacked Q_IMPORT_PLUGIN. DummyPluginFactory is a unit
+    # test and is intentionally left out.
+    AssistantToolFactory                # painting assistants tool
+    ColorRangeFactory                   # Select > Color Range
+    ColorSpaceConversionFactory         # Image/Layer > Convert Color Space
+    DefaultPaintOpsPluginFactory        # the default paintop brush engines
+    DigitalMixerPluginFactory           # Digital Mixer docker
+    ExtensionsPluginFactory             # colour space extensions
+    JPEGImportFactory                   # JPEG open  (libjpeg-turbo is built)
+    KisJPEGExportFactory                # JPEG save
+    KisPNGExportFactory                 # PNG save   (libpng is built)
+    KisSeparateChannelsPluginFactory    # Image > Separate Channels
+    KisTIFFExportFactory                # TIFF save  (libtiff is built)
+    ModifySelectionFactory              # Select > grow/shrink/border/feather
+    PNGImportFactory                    # PNG open
+    RotateImageFactory                  # Image > Rotate
+    SVGImportFactory                    # SVG open
+    SelectionToolsFactory               # rectangular/elliptical/... selection tools
+    ShearImageFactory                   # Image > Shear
+    SmallColorSelectorPluginFactory     # Small Color Selector docker
+    SpecificColorSelectorPluginFactory  # Specific Color Selector docker
+    TIFFImportFactory                   # TIFF open
+    ToolCropFactory                     # Crop tool
+    ToolPolygonFactory                  # Polygon tool
+    ToolPolylineFactory                 # Polyline tool
+    ToolTransformFactory                # Transform tool
+    metadataeditorPluginFactory         # metadata editor
     )  # plain variable (not CACHE): the iOS build dir is cached across runs
 
 # --- Generator -------------------------------------------------------------
