@@ -2432,8 +2432,8 @@ void KisConfig::setKineticScrollingEnabled(bool value)
 
 int KisConfig::kineticScrollingGesture(bool defaultValue) const
 {
-#ifdef Q_OS_ANDROID
-    int defaultGesture = 1; // LeftMouseButtonGesture
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    int defaultGesture = 1; // LeftMouseButtonGesture — touch drag (no middle button on a tablet)
 #else
     int defaultGesture = 2; // MiddleMouseButtonGesture
 #endif
@@ -2930,7 +2930,9 @@ void  KisConfig::setAssistantsDrawMode(AssistantsDrawMode value)
 
 bool KisConfig::longPressEnabled(bool defaultValue) const
 {
-#ifdef Q_OS_ANDROID
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    // Touch-first platforms have no right-click, so the long-press context menu
+    // must default on. (The filter itself is portable — see KisLongPressEventFilter.)
     bool defaultEnabled = true;
 #else
     bool defaultEnabled = false;

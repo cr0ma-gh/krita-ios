@@ -142,8 +142,9 @@ QScroller* KisKineticScroller::createPreconfiguredScroller(QAbstractScrollArea *
 
 QScroller::ScrollerGestureType KisKineticScroller::getConfiguredGestureType() {
     KConfigGroup config = KSharedConfig::openConfig()->group("");
-#ifdef Q_OS_ANDROID
-    // Use a different default. Shouldn't we use KisConfig::kineticScrollingGesture?
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    // Touch platforms: default to a left-button (touch-drag) gesture, matching
+    // the tested Android path. Shouldn't we use KisConfig::kineticScrollingGesture?
     int gesture = config.readEntry("KineticScrollingGesture", 1);
 #else
     int gesture = config.readEntry("KineticScrollingGesture", 0);

@@ -25,6 +25,8 @@
 
 #ifdef Q_OS_IOS
 #include "KisIOSFileProxy.h"
+#include "KisIOSAppLifecycle.h"
+#include "tiles3/kis_tile_data_store.h"
 #endif
 
 #include <QStandardPaths>
@@ -658,6 +660,24 @@ bool KisApplication::start(const KisApplicationArguments &args)
     KisConfigNotifier *cfgNotifier = KisConfigNotifier::instance();
     connect(cfgNotifier, &KisConfigNotifier::sigLongPressChanged, this, &KisApplication::slotSetLongPress);
     slotSetLongPress(cfg.longPressEnabled());
+
+#ifdef Q_OS_IOS
+    // iPadOS suspends and may kill memory-hungry apps at any time. Persist work
+    // the moment we are backgrounded, and shed image-tile memory under pressure,
+    // so a stroke in progress is never silently lost. autoSaveOnPause() writes an
+    // emergency autosave only for documents modified since the last one.
+    KisIOSAppLifecycle::install(
+        []() {
+            Q_FOREACH (QPointer<KisDocument> doc, KisPart::instance()->documents()) {
+                if (doc) {
+                    doc->autoSaveOnPause();
+                }
+            }
+        },
+        []() {
+            KisTileDataStore::instance()->checkFreeMemory();
+        });
+#endif
 
     // Xiaomi workaround: their stylus inexplicably inputs page up and down keys
     // when pressing stylus buttons. This flag causes the Android platform

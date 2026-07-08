@@ -568,9 +568,11 @@ endif()
 
 if(IOS)
     # UIKit shims: sandboxed file access + Apple Pencil capture, plus the
-    # plain-C++ glue that turns captured pencil samples into QTabletEvents.
+    # plain-C++ glue that turns captured pencil samples into QTabletEvents, and
+    # the app-lifecycle bridge (background autosave + memory-pressure handling).
     list(APPEND kritaui_LIB_SRCS
         KisIOSFileProxy.mm
+        KisIOSAppLifecycle.mm
         input/KisIOSTabletBridge.mm
         input/KisIOSTabletInput.cpp
     )
