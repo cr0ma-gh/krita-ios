@@ -365,6 +365,25 @@ QString KoFileDialog::filename()
 #endif
     } while (retryNeeded);
 
+#ifdef Q_OS_IOS
+    // The native iOS save dialog returns a plain local sandbox path, usually
+    // WITHOUT an extension — the device log showed "Saving Document as
+    // .../Documents/Pictures (mime: )": no suffix, therefore no mime type,
+    // and the save failed. Unlike Android's content:// URIs this path is a
+    // freely modifiable local file path, so ensure a known extension from the
+    // selected filter (falling back to Krita's native .kra).
+    if (d->type == SaveFile && !url.isEmpty()) {
+        const QString suffix = QFileInfo(url).suffix();
+        if (suffix.isEmpty() || KisMimeDatabase::mimeTypeForSuffix(suffix).isEmpty()) {
+            QString extension = d->suffixes.value(d->fileDialog->selectedNameFilter());
+            if (extension.isEmpty()) {
+                extension = QStringLiteral("kra");
+            }
+            url += QLatin1Char('.') + extension;
+        }
+    }
+#endif
+
     if (!url.isEmpty()) {
         d->mimeType = KisMimeDatabase::mimeTypeForFile(url, d->type == KoFileDialog::SaveFile ? false : true);
         saveUsedDir(url, d->dialogName);

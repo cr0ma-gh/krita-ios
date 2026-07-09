@@ -427,6 +427,13 @@ bool KisIOSTabletBridge::install(QWidget *canvas, Sink sink)
     // Apple Pencil hover (iPad Pro M2+): track the pen in proximity so the brush
     // outline follows it before contact. Guard against stacking a second
     // recognizer if install() runs again for the same view.
+    //
+    // TEMPORARILY DISABLED to bisect the on-device "stroke closes onto itself"
+    // artifact: the post-release tracer shows our hover TabletMoves streaming
+    // to the canvas right after every stroke end, and they are the prime
+    // suspect for painting the pen's travel between strokes. If the artifact
+    // disappears with hover off, it gets reintroduced with a proper guard.
+    if (false) {
     if (@available(iOS 16.1, *)) {
         if (!g_hoverGRs.contains((__bridge void *)view)) {
             KisPencilHoverHandler *handler = [[KisPencilHoverHandler alloc] init];
@@ -451,6 +458,7 @@ bool KisIOSTabletBridge::install(QWidget *canvas, Sink sink)
             g_hoverGRs.insert((__bridge void *)view, (__bridge void *)hover);
         }
     }
+    } // if (false) — hover bisection, see above
 
     return true;
 }
