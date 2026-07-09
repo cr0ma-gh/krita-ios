@@ -57,7 +57,7 @@
 #include "kis_wdg_options_jpegxl.h"
 #include "kis_jpegxl_export_tools.h"
 
-K_PLUGIN_FACTORY_WITH_JSON(ExportFactory, "krita_jxl_export.json", registerPlugin<JPEGXLExport>();)
+K_PLUGIN_FACTORY_WITH_JSON(JxlExportFactory, "krita_jxl_export.json", registerPlugin<JPEGXLExport>();)
 
 JPEGXLExport::JPEGXLExport(QObject *parent, const QVariantList &)
     : KisImportExportFilter(parent)

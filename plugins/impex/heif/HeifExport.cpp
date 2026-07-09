@@ -49,7 +49,7 @@ using heif::Error;
 
 class KisExternalLayer;
 
-K_PLUGIN_FACTORY_WITH_JSON(ExportFactory, "krita_heif_export.json", registerPlugin<HeifExport>();)
+K_PLUGIN_FACTORY_WITH_JSON(HeifExportFactory, "krita_heif_export.json", registerPlugin<HeifExport>();)
 
 HeifExport::HeifExport(QObject *parent, const QVariantList &) : KisImportExportFilter(parent)
 {

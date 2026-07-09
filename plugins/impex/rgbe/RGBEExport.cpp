@@ -37,7 +37,7 @@
 
 #include "kis_wdg_options_rgbe.h"
 
-K_PLUGIN_FACTORY_WITH_JSON(ExportFactory, "krita_rgbe_export.json", registerPlugin<RGBEExport>();)
+K_PLUGIN_FACTORY_WITH_JSON(RGBEExportFactory, "krita_rgbe_export.json", registerPlugin<RGBEExport>();)
 
 namespace RGBE
 {

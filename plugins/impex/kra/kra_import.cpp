@@ -13,7 +13,7 @@
 
 #include "kra_converter.h"
 
-K_PLUGIN_FACTORY_WITH_JSON(ImportFactory, "krita_kra_import.json", registerPlugin<KraImport>();)
+K_PLUGIN_FACTORY_WITH_JSON(KraImportFactory, "krita_kra_import.json", registerPlugin<KraImport>();)
 
 KraImport::KraImport(QObject *parent, const QVariantList &) : KisImportExportFilter(parent)
 {

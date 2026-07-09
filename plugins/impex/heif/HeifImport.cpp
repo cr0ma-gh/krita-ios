@@ -40,7 +40,7 @@
 
 using heif::Error;
 
-K_PLUGIN_FACTORY_WITH_JSON(ImportFactory, "krita_heif_import.json", registerPlugin<HeifImport>();)
+K_PLUGIN_FACTORY_WITH_JSON(HeifImportFactory, "krita_heif_import.json", registerPlugin<HeifImport>();)
 
 HeifImport::HeifImport(QObject *parent, const QVariantList &) : KisImportExportFilter(parent)
 {

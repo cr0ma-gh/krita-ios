@@ -19,7 +19,7 @@
 #include "qml_converter.h"
 #include <KoColorModelStandardIds.h>
 
-K_PLUGIN_FACTORY_WITH_JSON(ExportFactory, "krita_qml_export.json", registerPlugin<QMLExport>();)
+K_PLUGIN_FACTORY_WITH_JSON(QmlExportFactory, "krita_qml_export.json", registerPlugin<QMLExport>();)
 
 QMLExport::QMLExport(QObject *parent, const QVariantList &) : KisImportExportFilter(parent)
 {

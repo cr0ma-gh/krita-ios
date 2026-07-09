@@ -63,7 +63,6 @@ set(KRITA_IOS_ALL_PLUGIN_FACTORIES
     DeformPaintOpPluginFactory
     DodgeBurnPluginFactory
     ExperimentPaintOpPluginFactory
-    ExportFactory
     FilterOpFactory
     GaussianHighPassPluginFactory
     GridDockerPluginFactory
@@ -75,7 +74,6 @@ set(KRITA_IOS_ALL_PLUGIN_FACTORIES
     HistoryPluginFactory
     ImageShapePluginFactory
     ImagesplitFactory
-    ImportFactory
     IndexColorsFactory
     KarbonToolsPluginFactory
     KisBrushExportFactory
@@ -203,6 +201,23 @@ set(KRITA_IOS_ALL_PLUGIN_FACTORIES
     ToolPolylineFactory                 # Polyline tool
     ToolTransformFactory                # Transform tool
     metadataeditorPluginFactory         # metadata editor
+    # --- 2026-07-09: 8 impex plugins used the same generic factory class
+    # names (ExportFactory ×8, ImportFactory ×7). In the static link,
+    # Q_IMPORT_PLUGIN(ExportFactory) resolves ONE symbol — whichever archive
+    # comes first (ora) — silently dropping the rest: .kra SAVE AND OPEN were
+    # dead ("Krita does not support this file format", autosave size 0), as
+    # were PSD both ways, QML and RGBE export. The factories now have unique
+    # names (sources renamed); only the ones actually BUILT on iOS are listed
+    # (exr/heif/jxl/jp2 deps are off — importing an unbuilt factory breaks the
+    # link, see SmallColorSelector above).
+    KraExportFactory                    # .kra save — Krita's native format!
+    KraImportFactory                    # .kra open
+    OraExportFactory                    # OpenRaster save
+    OraImportFactory                    # OpenRaster open
+    PsdExportFactory                    # PSD save
+    PsdImportFactory                    # PSD open
+    QmlExportFactory                    # QML export
+    RGBEExportFactory                   # RGBE/HDR export
     )  # plain variable (not CACHE): the iOS build dir is cached across runs
 
 # --- Generator -------------------------------------------------------------

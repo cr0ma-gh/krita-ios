@@ -29,7 +29,7 @@
 
 class KisExternalLayer;
 
-K_PLUGIN_FACTORY_WITH_JSON(ExportFactory, "krita_kra_export.json", registerPlugin<KraExport>();)
+K_PLUGIN_FACTORY_WITH_JSON(KraExportFactory, "krita_kra_export.json", registerPlugin<KraExport>();)
 
 KraExport::KraExport(QObject *parent, const QVariantList &) : KisImportExportFilter(parent)
 {
