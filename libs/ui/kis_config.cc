@@ -1621,6 +1621,14 @@ QString KisConfig::pressureTabletCurve(bool defaultValue) const
         fallback = QStringLiteral("0,0;0.7,1;");
     }
 #endif
+#ifdef Q_OS_IOS
+    // "We ended up on iPads." Exactly as the note above predicts: the Apple
+    // Pencil's maximumPossibleForce needs enormous force to reach 1.0 —
+    // on-device stroke summaries show comfortable-to-hard strokes topping out
+    // around 0.44, so with a linear curve the brush barely responds. Cap out
+    // at 50%: full brush pressure at half the sensor range.
+    fallback = QStringLiteral("0,0;0.5,1;");
+#endif
     return (defaultValue ? fallback : m_cfg.readEntry("tabletPressureCurve", fallback));
 }
 
