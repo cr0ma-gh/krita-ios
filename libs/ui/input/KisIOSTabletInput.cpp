@@ -10,6 +10,8 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QElapsedTimer>
+#include <QMouseEvent>
 #include <QPoint>
 #include <QPointer>
 #include <QTabletEvent>
@@ -61,6 +63,11 @@ const QPointingDevice *iosStylusDevice()
 // Canvas widgets the bridge drives; used to scope suppression to the canvas.
 QVector<QPointer<QWidget>> g_canvasWidgets;
 
+// Armed on every synthesized stroke end; the suppressor then logs the next
+// pointer events hitting a canvas within 300 ms — to NAME whatever event
+// draws the "stroke closes onto itself" artifact reported on device.
+QElapsedTimer g_postReleaseWatch;
+
 bool overAnyCanvas(const QPoint &globalPos)
 {
     for (const QPointer<QWidget> &w : g_canvasWidgets) {
@@ -82,7 +89,49 @@ public:
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override
     {
-        Q_UNUSED(watched);
+        // Post-release tracer: name the pointer events reaching a canvas right
+        // after a synthesized stroke ends (first 10 lines overall).
+        if (g_postReleaseWatch.isValid() && g_postReleaseWatch.elapsed() < 300) {
+            const QEvent::Type t = event->type();
+            const bool pointerish = (t == QEvent::MouseButtonPress || t == QEvent::MouseMove
+                                     || t == QEvent::MouseButtonRelease || t == QEvent::TabletPress
+                                     || t == QEvent::TabletMove || t == QEvent::TouchBegin
+                                     || t == QEvent::TouchUpdate);
+            if (pointerish) {
+                QWidget *w = qobject_cast<QWidget *>(watched);
+                bool isCanvas = false;
+                if (w) {
+                    for (const QPointer<QWidget> &cw : g_canvasWidgets) {
+                        if (cw == w) {
+                            isCanvas = true;
+                            break;
+                        }
+                    }
+                }
+                if (isCanvas) {
+                    static int traced = 0;
+                    if (traced < 10) {
+                        ++traced;
+                        QString detail;
+                        if (t == QEvent::MouseButtonPress || t == QEvent::MouseMove
+                            || t == QEvent::MouseButtonRelease) {
+                            const QMouseEvent *me = static_cast<QMouseEvent *>(event);
+                            detail = QString("pos %1,%2 source %3")
+                                         .arg(me->position().x()).arg(me->position().y())
+                                         .arg(int(me->source()));
+                        } else if (t == QEvent::TabletPress || t == QEvent::TabletMove) {
+                            const QTabletEvent *tev = static_cast<QTabletEvent *>(event);
+                            detail = QString("pos %1,%2 device %3")
+                                         .arg(tev->position().x()).arg(tev->position().y())
+                                         .arg(tev->pointingDevice() == iosStylusDevice() ? "ours" : "foreign");
+                        }
+                        KisUsageLogger::log(QString("Pencil: post-release event on canvas: type %1 %2 (+%3ms)")
+                                                .arg(int(t)).arg(detail).arg(g_postReleaseWatch.elapsed()));
+                    }
+                }
+            }
+        }
+
         switch (event->type()) {
         case QEvent::TabletPress:
         case QEvent::TabletMove:
@@ -284,6 +333,7 @@ bool g_strokeInsideCanvas = false;
 int g_strokeSamples = 0;
 double g_strokeMinPressure = 1.0;
 double g_strokeMaxPressure = 0.0;
+QPointF g_strokeStartLocal;
 
 bool tryInstallBridge(QWidget *canvas)
 {
@@ -327,6 +377,7 @@ bool tryInstallBridge(QWidget *canvas)
             g_strokeSamples = 1;
             g_strokeMinPressure = s.pressure;
             g_strokeMaxPressure = s.pressure;
+            g_strokeStartLocal = local;
         } else if (s.phase == KisIOSPenSample::Hover) {
             if (!target->rect().contains(local.toPoint())) {
                 return;
@@ -342,13 +393,15 @@ bool tryInstallBridge(QWidget *canvas)
                 g_strokeInsideCanvas = false;
                 // Prove on-device whether pressure varies within a stroke.
                 static int summaries = 0;
-                if (summaries < 3) {
+                if (summaries < 5) {
                     ++summaries;
-                    KisUsageLogger::log(QString("Pencil: stroke ended (%1): %2 samples, pressure %3..%4")
+                    KisUsageLogger::log(QString("Pencil: stroke ended (%1): %2 samples, pressure %3..%4, from %5,%6 to %7,%8")
                                             .arg(s.phase == KisIOSPenSample::Cancel ? "cancel" : "end")
                                             .arg(g_strokeSamples)
                                             .arg(g_strokeMinPressure)
-                                            .arg(g_strokeMaxPressure));
+                                            .arg(g_strokeMaxPressure)
+                                            .arg(g_strokeStartLocal.x()).arg(g_strokeStartLocal.y())
+                                            .arg(local.x()).arg(local.y()));
                 }
             }
         }
@@ -378,6 +431,11 @@ bool tryInstallBridge(QWidget *canvas)
         // Bridge callbacks run on the UIKit main thread, which is Qt's GUI
         // thread on iOS, so a synchronous send is safe (and avoids heap churn).
         const bool handled = QApplication::sendEvent(target, &ev);
+
+        // Arm the post-release tracer (see NativeStylusSuppressor).
+        if (s.phase == KisIOSPenSample::End || s.phase == KisIOSPenSample::Cancel) {
+            g_postReleaseWatch.restart();
+        }
 
         // One-shot: prove whether Krita's input manager actually TOOK the
         // synthesized stroke (accepted=0 would mean painting still runs on a

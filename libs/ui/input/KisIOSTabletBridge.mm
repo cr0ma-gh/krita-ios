@@ -174,16 +174,22 @@ KisIOSPencilTapAction mapPreferredAction(UIPencilPreferredAction action)
     const KisIOSTabletBridge::Sink &sink = it.value();
 
     for (UITouch *touch in touches) {
-        // Coalesced touches give every sample at the display's full (120 Hz)
-        // rate, not just one per frame — essential for smooth strokes.
-        NSArray<UITouch *> *coalesced = [event coalescedTouchesForTouch:touch];
-        if (coalesced.count > 0) {
-            for (UITouch *c in coalesced) {
-                sink(makeSample(c, self.targetView, phase));
+        if (phase == KisIOSPenSample::Move) {
+            // Coalesced touches give every sample at the display's full
+            // (120 Hz) rate, not just one per frame — essential for smooth
+            // strokes. Only Move is a continuous stream though: emitting the
+            // coalesced set for Begin/End produced multiple TabletPress/
+            // TabletRelease per stroke, confusing the shortcut matcher.
+            NSArray<UITouch *> *coalesced = [event coalescedTouchesForTouch:touch];
+            if (coalesced.count > 0) {
+                for (UITouch *c in coalesced) {
+                    sink(makeSample(c, self.targetView, phase));
+                }
+                continue;
             }
-        } else {
-            sink(makeSample(touch, self.targetView, phase));
         }
+        // Begin/End/Cancel are discrete: exactly one sample per touch.
+        sink(makeSample(touch, self.targetView, phase));
     }
 }
 
