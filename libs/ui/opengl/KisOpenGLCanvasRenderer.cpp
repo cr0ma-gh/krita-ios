@@ -1084,6 +1084,24 @@ void KisOpenGLCanvasRenderer::renderCanvasGL(const QRect &updateRect)
         glDisable(GL_SCISSOR_TEST);
     }
 
+#ifdef Q_OS_IOS
+    // Black-canvas probe: read the framebuffer's centre pixel a few frames in.
+    // Cross-checked with the CPU projection probe in kis_canvas2: projection
+    // white + this black = GL display path; both white = presentation layer.
+    {
+        static int probeFrame = 0;
+        if (probeFrame >= 0 && ++probeFrame == 5) {
+            probeFrame = -1;
+            const QSize vp = d->viewportDevicePixelSize;
+            GLubyte px[4] = {0, 0, 0, 0};
+            glReadPixels(vp.width() / 2, vp.height() / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, px);
+            KisUsageLogger::log(QString("Canvas probe: GL centre pixel rgba(%1,%2,%3,%4), viewport %5x%6")
+                                    .arg(px[0]).arg(px[1]).arg(px[2]).arg(px[3])
+                                    .arg(vp.width()).arg(vp.height()));
+        }
+    }
+#endif
+
     if (KisOpenGL::supportsVAO()) {
         d->quadVAO.release();
     }

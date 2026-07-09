@@ -276,7 +276,11 @@ QString KisAutoSaveRecoveryDialog::autoSaveLocation()
 #if defined(Q_OS_WIN)
     // On Windows, use the temp location (https://bugs.kde.org/show_bug.cgi?id=314921)
     return QDir::tempPath();
-#elif defined(Q_OS_ANDROID)
+#elif defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    // Sandboxed platforms. On iOS QDir::homePath() is the app container ROOT,
+    // which is NOT writable (only Documents/, Library/ and tmp/ are): every
+    // autosave failed with "Cannot open file for writing". Use a Documents
+    // subfolder — on iOS that is even user-visible in the Files app.
     QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation).append("/krita-backup");
     if (!QDir(path).exists()) {
         QDir().mkpath(path);

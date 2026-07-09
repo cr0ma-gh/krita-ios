@@ -49,6 +49,7 @@
 #include "kis_config.h"
 #include "kis_config_notifier.h"
 #include <KisUsageLogger.h>
+#include <QTimer>
 #include "kis_abstract_canvas_widget.h"
 #include "kis_qpainter_canvas.h"
 #include "kis_group_layer.h"
@@ -795,6 +796,26 @@ void KisCanvas2::createCanvas(bool useOpenGL)
             createQPainterCanvas();
         } else {
             KisUsageLogger::log("Canvas: using the OpenGL (GLES) canvas");
+#ifdef Q_OS_IOS
+            // Black-canvas probe: once the initial render settles, sample the
+            // image projection's centre pixel CPU-side. Combined with the GL
+            // readback probe in KisOpenGLCanvasRenderer this splits the search:
+            // white here but black on screen = GL display path; non-white here
+            // = layer stack / background fill.
+            QTimer::singleShot(3000, this, [this]() {
+                KisImageWSP img = image();
+                if (!img) {
+                    KisUsageLogger::log("Canvas probe: no image");
+                    return;
+                }
+                QColor c;
+                img->projection()->pixel(img->width() / 2, img->height() / 2, &c);
+                KisUsageLogger::log(QString("Canvas probe: projection centre %1 (image %2x%3)")
+                                        .arg(c.name(QColor::HexArgb))
+                                        .arg(img->width())
+                                        .arg(img->height()));
+            });
+#endif
         }
     } else {
         KisUsageLogger::log("Canvas: using the QPainter (software) canvas");
