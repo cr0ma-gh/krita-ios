@@ -14,6 +14,7 @@
 #include <QPointer>
 #include <QTabletEvent>
 #include <QVariant>
+#include <QVector>
 #include <QWidget>
 
 #include <KisPart.h>
@@ -44,15 +45,34 @@ const QPointingDevice *iosStylusDevice()
 // --- native stylus stream suppression ---------------------------------------
 // Qt's iOS platform plugin (quiview.mm) also delivers Apple Pencil contact
 // strokes as QTabletEvents. Running both that stream and our bridge synthesis
-// duplicates every stroke; and the earlier "hand strokes off to Qt" approach
-// produced dots on device: the device log showed the handoff firing, after
-// which UIKit gesture interference turned the native stream into
-// press+cancel — one dab per stroke, with our synthesis permanently silent.
+// duplicates every stroke, so over the CANVAS our synthesis is the single
+// stroke source and the native stream is consumed here.
 //
-// So the bridge synthesis is the single authoritative stroke source (it is
-// also where palm rejection, hover and the double-tap live), and Qt's native
-// stylus events are CONSUMED here so they never reach Krita. If the native
-// stream doesn't exist in a given Qt build, this filter simply never matches.
+// Two hard-won subtleties:
+//  * A consumed-but-not-accepted tablet event makes Qt synthesize MOUSE events
+//    from it (AA_SynthesizeMouseForUnhandledTabletEvents): a second,
+//    pressure-less pointer stream raced our synthesis on device — uniform
+//    strokes and broken stroke ends. setAccepted(true) before consuming.
+//  * The suppression must apply ONLY over the canvas: outside it (toolbox,
+//    dockers) the pen must keep clicking UI, which works exactly through that
+//    mouse-from-tablet synthesis. So foreign stylus events over UI pass
+//    through untouched.
+
+// Canvas widgets the bridge drives; used to scope suppression to the canvas.
+QVector<QPointer<QWidget>> g_canvasWidgets;
+
+bool overAnyCanvas(const QPoint &globalPos)
+{
+    for (const QPointer<QWidget> &w : g_canvasWidgets) {
+        if (w && w->isVisible()) {
+            const QRect global(w->mapToGlobal(QPoint(0, 0)), w->size());
+            if (global.contains(globalPos)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
 class NativeStylusSuppressor : public QObject
 {
@@ -66,18 +86,32 @@ protected:
         switch (event->type()) {
         case QEvent::TabletPress:
         case QEvent::TabletMove:
-        case QEvent::TabletRelease:
+        case QEvent::TabletRelease: {
+            QTabletEvent *te = static_cast<QTabletEvent *>(event);
+            if (te->pointingDevice() != iosStylusDevice()
+                && te->deviceType() == QInputDevice::DeviceType::Stylus) {
+                if (!overAnyCanvas(te->globalPosition().toPoint())) {
+                    // Pen over UI: let Qt's mouse synthesis click widgets.
+                    return false;
+                }
+                static bool logged = false;
+                if (!logged) {
+                    logged = true;
+                    KisUsageLogger::log("Pencil: suppressing Qt-native stylus events over the canvas");
+                }
+                // Accepted + consumed: no duplicate stroke AND no synthesized
+                // mouse stream from it.
+                te->setAccepted(true);
+                return true;
+            }
+            break;
+        }
         case QEvent::TabletEnterProximity:
         case QEvent::TabletLeaveProximity: {
             const QTabletEvent *te = static_cast<QTabletEvent *>(event);
             if (te->pointingDevice() != iosStylusDevice()
                 && te->deviceType() == QInputDevice::DeviceType::Stylus) {
-                static bool logged = false;
-                if (!logged) {
-                    logged = true;
-                    KisUsageLogger::log("Pencil: suppressing Qt-native stylus events (bridge owns the stroke stream)");
-                }
-                return true; // consume: the bridge synthesis is the only source
+                return true; // no positions to scope by; harmless to drop
             }
             break;
         }
@@ -245,11 +279,17 @@ void KisIOSTabletInput::install(QWidget *canvas)
 
 namespace
 {
+// Per-stroke bookkeeping for the synthesis (GUI thread only, plain globals).
+bool g_strokeInsideCanvas = false;
+int g_strokeSamples = 0;
+double g_strokeMinPressure = 1.0;
+double g_strokeMaxPressure = 0.0;
+
 bool tryInstallBridge(QWidget *canvas)
 {
     QPointer<QWidget> target(canvas);
 
-    return KisIOSTabletBridge::install(canvas, [target](const KisIOSPenSample &s) {
+    const bool ok = KisIOSTabletBridge::install(canvas, [target](const KisIOSPenSample &s) {
         if (!target) {
             return;
         }
@@ -273,11 +313,44 @@ bool tryInstallBridge(QWidget *canvas)
         const QPointF local = QPointF(target->mapFrom(window, windowPosI)) + fraction;
         const QPointF global = QPointF(window->mapToGlobal(windowPosI)) + fraction;
 
-        // One-shot trace so the device log proves synthesized events flow.
-        static bool firstSynthLogged = false;
-        if (!firstSynthLogged && s.phase == KisIOSPenSample::Begin) {
-            firstSynthLogged = true;
-            KisUsageLogger::log(QString("Pencil: first synthesized tablet event (pressure %1)").arg(s.pressure));
+        // Strokes must START on the canvas. The recognizer sees every pencil
+        // touch in the whole window (toolbox, dockers, popups included);
+        // forwarding those to the canvas as tablet presses injected spurious
+        // strokes at nonsense coordinates and corrupted running ones. A stroke
+        // that began inside may wander outside (dragging past the edge is
+        // normal); hover is simply clipped to the canvas.
+        if (s.phase == KisIOSPenSample::Begin) {
+            g_strokeInsideCanvas = target->rect().contains(local.toPoint());
+            if (!g_strokeInsideCanvas) {
+                return;
+            }
+            g_strokeSamples = 1;
+            g_strokeMinPressure = s.pressure;
+            g_strokeMaxPressure = s.pressure;
+        } else if (s.phase == KisIOSPenSample::Hover) {
+            if (!target->rect().contains(local.toPoint())) {
+                return;
+            }
+        } else {
+            if (!g_strokeInsideCanvas) {
+                return;
+            }
+            ++g_strokeSamples;
+            g_strokeMinPressure = qMin(g_strokeMinPressure, s.pressure);
+            g_strokeMaxPressure = qMax(g_strokeMaxPressure, s.pressure);
+            if (s.phase == KisIOSPenSample::End || s.phase == KisIOSPenSample::Cancel) {
+                g_strokeInsideCanvas = false;
+                // Prove on-device whether pressure varies within a stroke.
+                static int summaries = 0;
+                if (summaries < 3) {
+                    ++summaries;
+                    KisUsageLogger::log(QString("Pencil: stroke ended (%1): %2 samples, pressure %3..%4")
+                                            .arg(s.phase == KisIOSPenSample::Cancel ? "cancel" : "end")
+                                            .arg(g_strokeSamples)
+                                            .arg(g_strokeMinPressure)
+                                            .arg(g_strokeMaxPressure));
+                }
+            }
         }
 
         // "Down" (a button held) means the pen is in contact and painting.
@@ -304,7 +377,31 @@ bool tryInstallBridge(QWidget *canvas)
 
         // Bridge callbacks run on the UIKit main thread, which is Qt's GUI
         // thread on iOS, so a synchronous send is safe (and avoids heap churn).
-        QApplication::sendEvent(target, &ev);
+        const bool handled = QApplication::sendEvent(target, &ev);
+
+        // One-shot: prove whether Krita's input manager actually TOOK the
+        // synthesized stroke (accepted=0 would mean painting still runs on a
+        // fallback pointer stream — the next thing to chase).
+        static bool firstSynthLogged = false;
+        if (!firstSynthLogged && s.phase == KisIOSPenSample::Begin) {
+            firstSynthLogged = true;
+            KisUsageLogger::log(QString("Pencil: first synthesized tablet press (pressure %1, handled %2, accepted %3)")
+                                    .arg(s.pressure).arg(handled).arg(ev.isAccepted()));
+        }
     });
+
+    if (ok) {
+        bool known = false;
+        for (const QPointer<QWidget> &w : g_canvasWidgets) {
+            if (w == canvas) {
+                known = true;
+                break;
+            }
+        }
+        if (!known) {
+            g_canvasWidgets.append(QPointer<QWidget>(canvas));
+        }
+    }
+    return ok;
 }
 } // namespace
